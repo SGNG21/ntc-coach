@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
     });
 
     const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
       return NextResponse.json({ error: 'Pas de JSON dans la réponse IA', raw }, { status: 500 });

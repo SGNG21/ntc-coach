@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { streamChat } from '@/lib/stream';
 import type { CustomSeance, CustomFicheSection, CustomMindNode, CustomQuizItem } from '@/types';
 
 const COLORS = ['#0f5298', '#6b2d7e', '#1c3d5a', '#dc2626', '#059669', '#d97706', '#7c3aed', '#0891b2'];
@@ -34,16 +35,16 @@ export function ImportTab() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let fullText = '';
+      await streamChat(
+        {
           messages: [{ role: 'user', content: `Cours : "${name.trim()}"\n---\n${text.substring(0, 6000)}\n---\nGénère les révisions JSON.` }],
           mode: 'import',
-        }),
-      });
-      const data = await res.json();
-      const jsonMatch = (data.text || '').match(/\{[\s\S]*\}/);
+        },
+        (chunk) => { fullText += chunk; }
+      );
+      const clean = fullText.replace(/```json|```/g, '').trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('JSON introuvable');
       const parsed = JSON.parse(jsonMatch[0]);
       if (!parsed.fiche || !parsed.mind || !parsed.quiz) throw new Error('Structure incomplète');

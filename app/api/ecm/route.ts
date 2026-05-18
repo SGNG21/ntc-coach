@@ -91,22 +91,25 @@ export async function POST(req: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     });
 
     const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
-      return NextResponse.json({ error: 'Pas de JSON dans la réponse IA', raw }, { status: 500 });
+      console.error('ECM no JSON in response:', raw.substring(0, 300));
+      return NextResponse.json({ error: 'Pas de JSON dans la réponse IA' }, { status: 500 });
     }
 
     try {
       const parsed = JSON.parse(jsonMatch[0]);
       return NextResponse.json({ content: parsed });
-    } catch {
-      return NextResponse.json({ error: 'JSON invalide dans la réponse IA', raw }, { status: 500 });
+    } catch (parseErr) {
+      console.error('ECM JSON parse error:', parseErr, jsonMatch[0].substring(0, 300));
+      return NextResponse.json({ error: 'JSON invalide dans la réponse IA' }, { status: 500 });
     }
   } catch (error) {
     console.error('ECM API error:', error);

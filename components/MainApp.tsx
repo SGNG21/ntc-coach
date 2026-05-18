@@ -4,6 +4,7 @@ import { MODULES } from '@/lib/reac-data';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
+import { EcmPage } from './EcmPage';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 
 // ─── Tabs ───────────────────────────────────────
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'fiches', label: '🗂️ Fiches' },
   { id: 'ccf', label: '🎯 Préparer CCF' },
   { id: 'import', label: '📥 Mes cours' },
+  { id: 'ecm', label: '🎓 ECM' },
 ];
 
 // ─── Modules sidebar ───────────────────────────
@@ -314,8 +316,8 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           />
         )}
 
-        {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-30 w-64 md:w-52 md:static md:flex-shrink-0 bg-white border-r border-stone-200 overflow-y-auto p-2 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        {/* Sidebar — cachée sur l'onglet ECM */}
+        <aside className={`fixed inset-y-0 left-0 z-30 w-64 md:w-52 md:static md:flex-shrink-0 bg-white border-r border-stone-200 overflow-y-auto p-2 transition-transform duration-300 ${tab === 'ecm' ? 'hidden' : ''} ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           {SIDEBAR.map(section => (
             <div key={section.section} className="mb-3">
               <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wider text-stone-400 px-1 py-1 mb-1">
@@ -348,7 +350,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </aside>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4">
+        <main className={tab === 'ecm' ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-y-auto p-4'}>
 
           {/* ── PROGRAMME ── */}
           {tab === 'programme' && (
@@ -559,6 +561,13 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
           {/* ── MES COURS ── */}
           {tab === 'import' && <ImportTab />}
+
+          {/* ── ECM ── */}
+          {tab === 'ecm' && (
+            <div className="flex-1 overflow-hidden" style={{ height: '100%' }}>
+              <EcmPage />
+            </div>
+          )}
 
         </main>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MODULES } from '@/lib/reac-data';
+import { streamChat } from '@/lib/stream';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
@@ -116,25 +117,23 @@ export function MainApp() {
   async function sendChat(text: string) {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...chatMessages, userMsg];
-    setChatMessages(newMsgs);
+    const aiId = (Date.now() + 1).toString();
+    setChatMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setChatLoading(true);
 
+    let fullText = '';
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMsgs.map(m => ({ role: m.role, content: m.content })),
-          moduleId, mode: chatMode,
-        }),
-      });
-      const data = await res.json();
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text || '...', timestamp: new Date() };
-      const finalMsgs = [...newMsgs, aiMsg];
-      setChatMessages(finalMsgs);
+      await streamChat(
+        { messages: newMsgs.map(m => ({ role: m.role, content: m.content })), moduleId, mode: chatMode },
+        (chunk) => {
+          fullText += chunk;
+          setChatMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+        }
+      );
+      const finalMsgs = [...newMsgs, { id: aiId, role: 'assistant' as const, content: fullText, timestamp: new Date() }];
       await saveSession(finalMsgs, score);
     } catch {
-      setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Erreur de connexion.', timestamp: new Date() }]);
+      setChatMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur de connexion.' } : m));
     } finally {
       setChatLoading(false);
     }
@@ -143,23 +142,21 @@ export function MainApp() {
   async function sendCCF(text: string) {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...ccfMessages, userMsg];
-    setCcfMessages(newMsgs);
+    const aiId = (Date.now() + 1).toString();
+    setCcfMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setCcfLoading(true);
 
+    let fullText = '';
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMsgs.map(m => ({ role: m.role, content: m.content })),
-          ccfSimMode: ccfMode,
-        }),
-      });
-      const data = await res.json();
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text || '...', timestamp: new Date() };
-      setCcfMessages([...newMsgs, aiMsg]);
+      await streamChat(
+        { messages: newMsgs.map(m => ({ role: m.role, content: m.content })), ccfSimMode: ccfMode },
+        (chunk) => {
+          fullText += chunk;
+          setCcfMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+        }
+      );
     } catch {
-      setCcfMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Erreur de connexion.', timestamp: new Date() }]);
+      setCcfMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur de connexion.' } : m));
     } finally {
       setCcfLoading(false);
     }
@@ -168,25 +165,21 @@ export function MainApp() {
   async function sendCorr(text: string) {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...corrMessages, userMsg];
-    setCorrMessages(newMsgs);
+    const aiId = (Date.now() + 1).toString();
+    setCorrMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setCorrLoading(true);
 
-    const mod = MODULES[moduleId];
+    let fullText = '';
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMsgs.map(m => ({ role: m.role, content: m.content })),
-          moduleId,
-          mode: 'expliquer',
-        }),
-      });
-      const data = await res.json();
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text || '...', timestamp: new Date() };
-      setCorrMessages([...newMsgs, aiMsg]);
+      await streamChat(
+        { messages: newMsgs.map(m => ({ role: m.role, content: m.content })), moduleId, mode: 'expliquer' },
+        (chunk) => {
+          fullText += chunk;
+          setCorrMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+        }
+      );
     } catch {
-      setCorrMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Erreur.', timestamp: new Date() }]);
+      setCorrMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur.' } : m));
     } finally {
       setCorrLoading(false);
     }
@@ -216,11 +209,10 @@ export function MainApp() {
     setFicheLoading(true);
     setFicheContent('');
     const mod = MODULES[ficheModule];
+    let fullText = '';
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await streamChat(
+        {
           messages: [{
             role: 'user',
             content: `Génère une fiche de révision COMPLÈTE pour le Titre Pro NTC (REAC 2024) sur : "${mod.label}".
@@ -236,10 +228,12 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           }],
           moduleId: ficheModule,
           mode: 'expliquer',
-        }),
-      });
-      const data = await res.json();
-      setFicheContent(data.text || '');
+        },
+        (chunk) => {
+          fullText += chunk;
+          setFicheContent(fullText);
+        }
+      );
     } catch {
       setFicheContent('❌ Erreur de génération.');
     } finally {
@@ -397,7 +391,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                     </div>
                   )}
                   {chatMessages.map(m => <ChatMessage key={m.id} message={m} />)}
-                  {chatLoading && <TypingIndicator />}
+                  {chatLoading && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
                   <div ref={chatBottomRef} />
                 </div>
                 <ChatInput onSend={sendChat} disabled={chatLoading} />
@@ -448,21 +442,21 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                   onScore={addScore}
                   onSubmitAnswer={async (answer: string, correction: string) => {
                     const prompt = `Correcteur NTC. Compétence : ${mod.label}. Critères REAC : ${mod.criteres.join(' | ')}. Correction référence : ${correction}. Réponse : ${answer}. Donne une correction bienveillante : note /20, points réussis (citer critères REAC), lacunes, conseils.`;
-                    setCorrMessages([]);
                     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: answer, timestamp: new Date() };
-                    setCorrMessages([userMsg]);
+                    const aiId = (Date.now() + 1).toString();
+                    setCorrMessages([userMsg, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
                     setCorrLoading(true);
+                    let fullText = '';
                     try {
-                      const res = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], moduleId, mode: 'expliquer' }),
-                      });
-                      const data = await res.json();
-                      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text || '...', timestamp: new Date() };
-                      setCorrMessages([userMsg, aiMsg]);
+                      await streamChat(
+                        { messages: [{ role: 'user', content: prompt }], moduleId, mode: 'expliquer' },
+                        (chunk) => {
+                          fullText += chunk;
+                          setCorrMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+                        }
+                      );
                     } catch {
-                      setCorrMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Erreur.', timestamp: new Date() }]);
+                      setCorrMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur.' } : m));
                     } finally {
                       setCorrLoading(false);
                     }
@@ -476,7 +470,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                   <div className="text-[12px] font-semibold text-navy-700 px-3 pt-3 pb-1">💬 Correction & discussion</div>
                   <div className="p-3 bg-stone-50 flex flex-col gap-2.5 max-h-64 overflow-y-auto">
                     {corrMessages.map(m => <ChatMessage key={m.id} message={m} />)}
-                    {corrLoading && <TypingIndicator />}
+                    {corrLoading && corrMessages[corrMessages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
                     <div ref={corrBottomRef} />
                   </div>
                   <ChatInput onSend={sendCorr} disabled={corrLoading} placeholder="Demander une explication, aller plus loin..." />
@@ -547,7 +541,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                     </div>
                   )}
                   {ccfMessages.map(m => <ChatMessage key={m.id} message={m} />)}
-                  {ccfLoading && <TypingIndicator />}
+                  {ccfLoading && ccfMessages[ccfMessages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
                   <div ref={ccfBottomRef} />
                 </div>
                 <ChatInput

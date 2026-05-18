@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Minimize2 } from 'lucide-react';
+import { streamChat } from '@/lib/stream';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
@@ -35,37 +36,26 @@ export function Chatbot() {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    const history = [...messages, userMsg]
+      .filter(m => m.id !== 'welcome')
+      .map(m => ({ role: m.role, content: m.content }));
+
+    const aiId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, userMsg, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setLoading(true);
 
+    let fullText = '';
     try {
-      const history = [...messages, userMsg]
-        .filter(m => m.id !== 'welcome')
-        .map(m => ({ role: m.role, content: m.content }));
-
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history, isChatbot: true }),
-      });
-
-      const data = await res.json();
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.text || 'Désolé, une erreur est survenue.',
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
+      await streamChat(
+        { messages: history, isChatbot: true },
+        (chunk) => {
+          fullText += chunk;
+          setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+        }
+      );
       if (!open) setUnread(n => n + 1);
     } catch {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '❌ Erreur de connexion. Vérifiez le serveur.',
-        timestamp: new Date(),
-      }]);
+      setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur de connexion. Vérifiez le serveur.' } : m));
     } finally {
       setLoading(false);
     }
@@ -130,7 +120,7 @@ export function Chatbot() {
                 {messages.map(m => (
                   <ChatMessage key={m.id} message={m} />
                 ))}
-                {loading && <TypingIndicator />}
+                {loading && messages[messages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
                 <div ref={bottomRef} />
               </div>
 

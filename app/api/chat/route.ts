@@ -1,30 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildChatSystem, buildChatbotSystem, buildImportSystem } from '@/lib/prompts';
 import type { ModuleId } from '@/types';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const {
-      messages,
-      moduleId,
-      mode,
-      extraContext,
-      isChatbot = false,
-      ccfSimMode,
-    } = body;
+    const { messages, moduleId, mode, extraContext, isChatbot = false, ccfSimMode } = body;
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ error: 'messages requis' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'messages requis' }), { status: 400 });
     }
 
     let system: string;
-
     if (isChatbot) {
       system = buildChatbotSystem();
     } else if (ccfSimMode) {
@@ -36,7 +26,7 @@ export async function POST(req: NextRequest) {
       system = buildChatSystem(moduleId as ModuleId, mode, extraContext);
     }
 
-    const response = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 1200,
       system,
@@ -46,16 +36,30 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    const text = response.content[0]?.type === 'text'
-      ? response.content[0].text
-      : '';
+    const readable = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    return NextResponse.json({ text });
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (error) {
     console.error('Chat API error:', error);
-    return NextResponse.json(
-      { error: 'Erreur serveur. Vérifiez votre clé API Anthropic.' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Erreur serveur' }), { status: 500 });
   }
 }

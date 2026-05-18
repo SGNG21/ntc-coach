@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ECM_MATIERES, ECM_LIST } from '@/lib/ecm-data';
 import type { EcmId } from '@/lib/ecm-data';
+import { streamChat } from '@/lib/stream';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
@@ -101,26 +102,27 @@ export function EcmPage() {
   async function sendChat(text: string) {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...chatMessages, userMsg];
-    setChatMessages(newMsgs);
+    const aiId = (Date.now() + 1).toString();
+    setChatMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setChatLoading(true);
     const prog = matiere.programme.map(p => `${p.title}: ${p.points.join(', ')}`).join('\n');
     const extraContext = `Matière ECM : ${matiere.label}\nProgramme :\n${prog}${courseText ? `\n\nCours importé par l'étudiante :\n${courseText.substring(0, 2000)}` : ''}`;
+    let fullText = '';
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await streamChat(
+        {
           messages: newMsgs.map(m => ({ role: m.role, content: m.content })),
           moduleId: 'transversal',
           mode: 'expliquer',
           extraContext,
-        }),
-      });
-      const data = await res.json();
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text || '...', timestamp: new Date() };
-      setChatMessages([...newMsgs, aiMsg]);
+        },
+        (chunk) => {
+          fullText += chunk;
+          setChatMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: fullText } : m));
+        }
+      );
     } catch {
-      setChatMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Erreur de connexion.', timestamp: new Date() }]);
+      setChatMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: '❌ Erreur de connexion.' } : m));
     } finally {
       setChatLoading(false);
     }
@@ -408,7 +410,7 @@ export function EcmPage() {
                     </div>
                   )}
                   {chatMessages.map(m => <ChatMessage key={m.id} message={m} />)}
-                  {chatLoading && <TypingIndicator />}
+                  {chatLoading && chatMessages[chatMessages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
                   <div ref={chatBottomRef} />
                 </div>
                 <ChatInput

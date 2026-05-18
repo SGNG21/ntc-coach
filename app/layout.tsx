@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { DM_Sans, DM_Mono } from 'next/font/google';
 import './globals.css';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
+import { InstallPWA } from '@/components/InstallPWA';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="fr" className={`${dmSans.variable} ${dmMono.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#1c3d5a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -37,6 +39,7 @@ export default function RootLayout({
       <body className="font-sans bg-stone-100 text-stone-900 antialiased">
         {children}
         <FeedbackWidget />
+        <InstallPWA />
         <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');` }} />
       </body>
     </html>

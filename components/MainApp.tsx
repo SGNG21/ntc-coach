@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { MODULES } from '@/lib/reac-data';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { ImportTab } from './ImportTab';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score } from '@/types';
 
 // ─── Tabs ───────────────────────────────────────
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'exercices', label: '✏️ Exercices CCF' },
   { id: 'fiches', label: '🗂️ Fiches' },
   { id: 'ccf', label: '🎯 Préparer CCF' },
+  { id: 'import', label: '📥 Mes cours' },
 ];
 
 // ─── Modules sidebar ───────────────────────────
@@ -525,6 +527,9 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               </div>
             </div>
           )}
+
+          {/* ── MES COURS ── */}
+          {tab === 'import' && <ImportTab />}
 
         </main>
       </div>

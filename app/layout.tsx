@@ -26,8 +26,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={`${dmSans.variable} ${dmMono.variable}`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1c3d5a" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="NTC Coach" />
+      </head>
       <body className="font-sans bg-stone-100 text-stone-900 antialiased">
         {children}
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');` }} />
       </body>
     </html>
   );

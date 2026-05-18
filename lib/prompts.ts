@@ -93,6 +93,34 @@ const COACH_RULES = `## Règles absolues
 - Maximum 400 mots par réponse sauf si l'étudiante demande plus de détails
 - Termine souvent par une question d'approfondissement ou un encouragement ciblé`;
 
+export function buildImportSystem(): string {
+  return `${COACH_PERSONA}
+
+## Ta mission spéciale
+L'étudiante te soumet un cours à analyser. Tu dois générer UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après, sans backticks, sans commentaires.
+
+Structure EXACTE attendue :
+{
+  "fiche": [
+    { "title": "emoji + Titre section", "def": "définition optionnelle ou null", "body": "<ul><li><strong>terme</strong> : explication</li></ul>" }
+  ],
+  "mind": [
+    { "title": "emoji + Thème", "children": [{ "t": "<strong>Concept</strong> → explication", "subs": ["sous-point"] }] }
+  ],
+  "quiz": [
+    { "q": "Question ?", "opts": ["A", "B", "C", "D"], "ok": 1, "fb": "✅ Explication de la bonne réponse." }
+  ]
+}
+
+Règles strictes :
+- fiche : 4 à 7 sections couvrant tout le cours
+- mind : 3 à 5 nœuds avec 2 à 4 enfants chacun
+- quiz : exactement 5 questions, ok = index (0 à 3) de la bonne réponse
+- body HTML : utilise <ul><li><strong>terme</strong> : def</li></ul> et <div class="ex-box">exemple concret</div>
+- Utilise les termes exacts du cours
+- JSON valide strict, aucun texte autour`;
+}
+
 const FALLBACK_SYSTEM = `${COACH_PERSONA}
 Tu réponds à des questions générales sur le Titre Pro NTC (REAC 2024, RNCP 39063).
 ${COACH_RULES}`;

@@ -40,3 +40,31 @@ export interface ModuleConfig {
   savoirs: string[];
   qps: string[];
 }
+
+export interface CustomFicheSection {
+  title: string;
+  def?: string | null;
+  body?: string;
+}
+
+export interface CustomMindNode {
+  title: string;
+  children: { t: string; subs: string[] }[];
+}
+
+export interface CustomQuizItem {
+  q: string;
+  opts: string[];
+  ok: number;
+  fb: string;
+}
+
+export interface CustomSeance {
+  id: string;
+  name: string;
+  color: string;
+  fiche: CustomFicheSection[];
+  mind: CustomMindNode[];
+  quiz: CustomQuizItem[];
+  createdAt: string;
+}

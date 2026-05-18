@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { buildChatSystem, buildChatbotSystem } from '@/lib/prompts';
+import { buildChatSystem, buildChatbotSystem, buildImportSystem } from '@/lib/prompts';
 import type { ModuleId } from '@/types';
 
 const anthropic = new Anthropic({
@@ -30,12 +30,14 @@ export async function POST(req: NextRequest) {
     } else if (ccfSimMode) {
       const { CCF_SIMULATION_SYSTEMS } = await import('@/lib/reac-data');
       system = CCF_SIMULATION_SYSTEMS[ccfSimMode] || buildChatbotSystem();
+    } else if (mode === 'import') {
+      system = buildImportSystem();
     } else {
       system = buildChatSystem(moduleId as ModuleId, mode, extraContext);
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1200,
       system,
       messages: messages.map((m: { role: string; content: string }) => ({

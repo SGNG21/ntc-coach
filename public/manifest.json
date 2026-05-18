@@ -1,0 +1,10 @@
+{
+  "name": "NTC Coach — Révision Titre Pro",
+  "short_name": "NTC Coach",
+  "description": "Révision Titre Pro NTC · REAC 2024 · RNCP 39063",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c3d5a",
+  "theme_color": "#1c3d5a",
+  "orientation": "portrait"
+}

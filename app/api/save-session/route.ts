@@ -6,6 +6,7 @@ export async function POST(req: NextRequest) {
     const { sessionId, messages, score, moduleId } = await req.json();
 
     const db = supabaseAdmin();
+    if (!db) return NextResponse.json({ sessionId: null });
 
     if (sessionId) {
       // Update session existante
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const db = supabaseAdmin();
+    if (!db) return NextResponse.json({ progression: {} });
 
     // Récupérer stats globales de progression
     const { data, error } = await db

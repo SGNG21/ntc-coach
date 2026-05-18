@@ -706,8 +706,9 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
   onSubmitAnswer: (answer: string, correction: string) => void;
 }) {
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [redacText, setRedacText] = useState('');
+  const [sits, setSits] = useState<Record<number, string>>({});
+  const [evals, setEvals] = useState<Record<number, string>>({});
 
   const tagColor = moduleType === 'c1' ? 'bg-ccp1-50 text-ccp1-900' : moduleType === 'c2' ? 'bg-ccp2-50 text-ccp2-900' : 'bg-navy-50 text-navy-700';
 
@@ -809,7 +810,6 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
   // Situation
   if ((data as { type?: string }).type === 'situation') {
     const d = data as { entreprise: string; secteur: string; contexte: string; questions: Array<{ q: string; critere_reac?: string; correction: string }> };
-    const [sits, setSits] = useState<Record<number, string>>({});
     return (
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
         <div className="bg-navy-50 px-3 py-2 text-[12px] font-semibold text-navy-700">
@@ -847,7 +847,6 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
   // Grille
   if ((data as { type?: string }).type === 'grille') {
     const d = data as { titre: string; criteres: Array<{ critere_officiel: string; question_pratique: string; indicateurs: string[] }> };
-    const [evals, setEvals] = useState<Record<number, string>>({});
     return (
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
         <div className="bg-navy-50 px-3 py-2 text-[12px] font-semibold text-navy-700">

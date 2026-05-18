@@ -75,6 +75,7 @@ export function MainApp() {
   const [ficheModule, setFicheModule] = useState<ModuleId>('veille');
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, byModule: {} });
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfBottomRef = useRef<HTMLDivElement>(null);
@@ -263,10 +264,17 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
     <div className="flex flex-col h-screen">
       {/* Header */}
       <header className="bg-navy-700 text-white px-4 py-2.5 flex items-center justify-between flex-shrink-0 shadow-md">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            className="md:hidden p-1 text-white/80 hover:text-white mr-1 flex-shrink-0"
+            onClick={() => setSidebarOpen(v => !v)}
+            aria-label="Menu modules"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <span className="text-[9px] font-bold bg-red-600 px-1.5 py-0.5 rounded uppercase tracking-wider">Titre Pro</span>
-          <h1 className="text-[14px] font-semibold">NTC Coach — 1ère année</h1>
-          <span className="text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
+          <h1 className="text-[13px] font-semibold">NTC Coach</h1>
+          <span className="hidden sm:inline text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
         </div>
         <div className="text-[11px] bg-white/12 px-2.5 py-1 rounded-full font-mono">
           Score : {score.correct}/{score.total}
@@ -274,12 +282,12 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
       </header>
 
       {/* Nav tabs */}
-      <nav className="bg-white border-b border-stone-200 flex px-4 overflow-x-auto flex-shrink-0">
+      <nav className="bg-white border-b border-stone-200 flex px-2 sm:px-4 overflow-x-auto flex-shrink-0">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-3 text-[12.5px] font-medium whitespace-nowrap border-b-2 transition-colors ${
+            className={`px-2.5 sm:px-4 py-3 text-[11px] sm:text-[12.5px] font-medium whitespace-nowrap border-b-2 transition-colors ${
               tab === t.id
                 ? 'text-navy-700 border-red-600'
                 : 'text-stone-400 border-transparent hover:text-navy-700'
@@ -291,10 +299,18 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
       </nav>
 
       {/* Main */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-20 bg-black/40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         {/* Sidebar */}
-        <aside className="w-52 flex-shrink-0 bg-white border-r border-stone-200 overflow-y-auto p-2">
+        <aside className={`fixed inset-y-0 left-0 z-30 w-64 md:w-52 md:static md:flex-shrink-0 bg-white border-r border-stone-200 overflow-y-auto p-2 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           {SIDEBAR.map(section => (
             <div key={section.section} className="mb-3">
               <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wider text-stone-400 px-1 py-1 mb-1">
@@ -307,7 +323,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                 return (
                   <button
                     key={item.id}
-                    onClick={() => { setModuleId(item.id); setModuleType(item.type); }}
+                    onClick={() => { setModuleId(item.id); setModuleType(item.type); setSidebarOpen(false); }}
                     className={`w-full text-left px-2 py-1.5 rounded-lg border text-[11.5px] flex items-start gap-2 transition-all mb-0.5 ${
                       isActive
                         ? `${styles.active} border font-medium`
@@ -340,7 +356,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               {/* Mode selector */}
               <div className="bg-white rounded-xl border border-stone-200 p-3 flex-shrink-0">
                 <div className="text-[13px] font-semibold text-navy-700 mb-2">🎯 Mode de révision — {mod.label}</div>
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                   {(['expliquer', 'quiz', 'scenario', 'criteres'] as ChatMode[]).map(m => (
                     <ModeCard
                       key={m}
@@ -387,7 +403,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
             <div className="flex flex-col gap-3">
               <div className="bg-white rounded-xl border border-stone-200 p-3">
                 <div className="text-[13px] font-semibold text-navy-700 mb-2">✏️ Exercices CCF — {mod.label}</div>
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                   {(['qcm', 'redaction', 'situation', 'grille'] as ExoMode[]).map(m => (
                     <ModeCard
                       key={m}
@@ -495,7 +511,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               <CCFInfoPanel />
               <div className="bg-white rounded-xl border border-stone-200 p-3">
                 <div className="text-[13px] font-semibold text-navy-700 mb-2">🤖 Simulation d&apos;épreuve</div>
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                   {(['prosp_tel', 'nego_face', 'entretien_tech'] as CCFMode[]).map(m => (
                     <ModeCard
                       key={m}
@@ -569,7 +585,7 @@ function ProgrammeTab({ mod, moduleId, moduleType }: { mod: ModuleConfig; module
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {[
           { v: '9', l: 'Compétences pro' },
           { v: '5', l: 'Compétences transversales' },
@@ -592,7 +608,7 @@ function ProgrammeTab({ mod, moduleId, moduleType }: { mod: ModuleConfig; module
         <div className="p-3">
           <p className="text-[12.5px] text-stone-600 mb-3">{mod.desc}</p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2">Critères d&apos;évaluation REAC 2024</div>
               <div className="flex flex-col gap-1.5">
@@ -638,7 +654,7 @@ function ProgrammeTab({ mod, moduleId, moduleType }: { mod: ModuleConfig; module
 
 function CCFInfoPanel() {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
         <div className="bg-ccp1-600 text-white px-3 py-2 text-[12px] font-semibold">📝 Titre complet — 8h30 min</div>
         <div className="p-3 space-y-1.5">
@@ -716,7 +732,7 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
             </div>
             <div className="p-3">
               <p className="text-[13px] font-medium mb-3">{q.q}</p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {Object.entries(q.options).map(([k, v]) => {
                   const chosen = answers[i];
                   const isChosen = chosen === k;
@@ -890,7 +906,7 @@ function StaticFiches() {
     { t: 'Juridique & RGPD', ccp: 'Transversal', col: '#7a4f0e', items: ['<strong>RGPD :</strong> consentement, droit à l\'oubli, portabilité, CNIL', '<strong>Loi Naegelen (2020-901) :</strong> authentification numéros téléphone', '<strong>CGV :</strong> éléments obligatoires, opposabilité, délais de rétractation', '<strong>Loi AGEC (2020) :</strong> économie circulaire, indice de réparabilité'] },
   ];
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {fiches.map(f => (
         <div key={f.t} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
           <div className="px-3 py-2 text-white text-[11.5px] font-semibold flex items-center gap-2" style={{ background: f.col }}>
@@ -918,7 +934,7 @@ function parseMarkdown(text: string): string {
     .replace(/^### (.+)$/gm, '<h3 style="font-size:13.5px;font-weight:600;margin:12px 0 6px;color:#1c3d5a">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 style="font-size:14px;font-weight:600;margin:14px 0 7px;color:#1c3d5a">$1</h2>')
     .replace(/^- (.+)$/gm, '<li style="margin-bottom:3px">$1</li>')
-    .replace(/(<li[^>]*>.*?<\/li>\n?)+/gs, (m) => `<ul style="padding-left:1.1em;margin:6px 0">${m}</ul>`)
+    .replace(/(<li[^>]*>[^\n]*<\/li>\n?)+/g, (m) => `<ul style="padding-left:1.1em;margin:6px 0">${m}</ul>`)
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
 }

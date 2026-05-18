@@ -77,7 +77,7 @@ export function Chatbot() {
       {!open && (
         <button
           onClick={() => { setOpen(true); setUnread(0); }}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-navy-700 hover:bg-navy-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-navy-700 hover:bg-navy-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
           aria-label="Ouvrir le chat coach NTC"
         >
           <MessageCircle size={24} />
@@ -92,8 +92,8 @@ export function Chatbot() {
       {/* Fenêtre chat */}
       {open && (
         <div
-          className={`fixed bottom-6 right-6 z-50 w-[360px] bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col transition-all ${
-            minimized ? 'h-14' : 'h-[520px]'
+          className={`fixed z-50 bg-white shadow-2xl border border-stone-200 flex flex-col transition-all bottom-0 right-0 left-0 rounded-t-2xl sm:left-auto sm:bottom-6 sm:right-6 sm:rounded-2xl sm:w-[360px] ${
+            minimized ? 'h-14' : 'h-[70vh] sm:h-[520px]'
           }`}
         >
           {/* Header */}

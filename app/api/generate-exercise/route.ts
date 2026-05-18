@@ -41,19 +41,23 @@ export async function POST(req: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1200,
+      max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const raw = response.content[0]?.type === 'text' ? response.content[0].text : '{}';
-    const clean = raw.replace(/```json|```/g, '').trim();
+    const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      return NextResponse.json({ error: 'Pas de JSON dans la réponse IA', raw }, { status: 500 });
+    }
 
     try {
-      const parsed = JSON.parse(clean);
+      const parsed = JSON.parse(jsonMatch[0]);
       return NextResponse.json({ exercise: parsed });
     } catch {
       return NextResponse.json(
-        { error: 'Réponse JSON invalide de l\'IA', raw },
+        { error: 'JSON invalide dans la réponse IA', raw },
         { status: 500 }
       );
     }

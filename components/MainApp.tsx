@@ -80,10 +80,15 @@ export function MainApp() {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfBottomRef = useRef<HTMLDivElement>(null);
   const corrBottomRef = useRef<HTMLDivElement>(null);
+  const exoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatLoading]);
+
+  useEffect(() => {
+    if (exoData) exoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [exoData]);
 
   useEffect(() => {
     ccfBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -414,19 +419,26 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <button
                     onClick={generateExo}
                     disabled={exoLoading}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-stone-200 text-white rounded-lg text-[12.5px] font-medium transition-colors"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white rounded-lg text-[12.5px] font-medium transition-all flex items-center gap-2"
                   >
-                    {exoLoading ? '⏳ Génération...' : '🎲 Générer un exercice'}
+                    {exoLoading && (
+                      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+                      </svg>
+                    )}
+                    {exoLoading ? 'Génération en cours…' : '🎲 Générer un exercice'}
                   </button>
                   <span className="text-[11.5px] text-stone-400">{exoCount} exercice(s) cette session</span>
                 </div>
               </div>
 
               {exoData && (
+                <div ref={exoRef}>
                 <ExerciseRenderer
                   data={exoData}
                   moduleId={moduleId}
@@ -454,6 +466,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                     }
                   }}
                 />
+                </div>
               )}
 
               {(corrMessages.length > 0 || corrLoading) && (

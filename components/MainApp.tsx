@@ -4,7 +4,7 @@ import { MODULES } from '@/lib/reac-data';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
-import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score } from '@/types';
+import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 
 // ─── Tabs ───────────────────────────────────────
 const TABS = [
@@ -563,7 +563,7 @@ function ModeCard({ active, onClick, modes, id }: {
   );
 }
 
-function ProgrammeTab({ mod, moduleId, moduleType }: { mod: ReturnType<typeof MODULES[ModuleId]>; moduleId: ModuleId; moduleType: 'c1' | 'c2' | 'tr' }) {
+function ProgrammeTab({ mod, moduleId, moduleType }: { mod: ModuleConfig; moduleId: ModuleId; moduleType: 'c1' | 'c2' | 'tr' }) {
   const ccpColor = moduleType === 'c1' ? 'bg-ccp1-600' : moduleType === 'c2' ? 'bg-ccp2-600' : 'bg-navy-700';
   const ccpLight = moduleType === 'c1' ? 'bg-ccp1-50 border-ccp1-600/20' : moduleType === 'c2' ? 'bg-ccp2-50 border-ccp2-600/20' : 'bg-navy-50 border-navy-500/20';
 

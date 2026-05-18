@@ -5,7 +5,7 @@ import type { ModuleId, ExoMode } from '@/types';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const PROMPTS: Record<ExoMode, (mod: ReturnType<typeof MODULES[ModuleId]['criteres']['join']>, label: string, criteres: string[]) => string> = {
+const PROMPTS: Record<ExoMode, (mod: string, label: string, criteres: string[]) => string> = {
   qcm: (_, label, criteres) => `Génère un QCM de 4 questions sur "${label}" pour le Titre Pro NTC, calibré sur les critères CCF officiels du REAC 2024 : ${criteres.join(', ')}.
 Retourne UNIQUEMENT ce JSON (aucun texte avant ou après) :
 {"questions":[{"q":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"A","explanation":"...","critere":"critère REAC visé"}]}`,

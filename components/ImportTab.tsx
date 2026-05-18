@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import type { CustomSeance, CustomFicheSection, CustomMindNode, CustomQuizItem } from '@/types';
 
 const COLORS = ['#0f5298', '#6b2d7e', '#1c3d5a', '#dc2626', '#059669', '#d97706', '#7c3aed', '#0891b2'];
@@ -171,7 +171,7 @@ function SeanceViewer({ seance, viewMode, setViewMode, quizState, setQuizState, 
   viewMode: ViewMode;
   setViewMode: (m: ViewMode) => void;
   quizState: { pos: number; answered: boolean; answers: Record<number, number> };
-  setQuizState: React.Dispatch<React.SetStateAction<{ pos: number; answered: boolean; answers: Record<number, number> }>>;
+  setQuizState: Dispatch<SetStateAction<{ pos: number; answered: boolean; answers: Record<number, number> }>>;
   onBack: () => void;
 }) {
   return (
@@ -254,7 +254,7 @@ function MindView({ seance }: { seance: CustomSeance }) {
 function QuizView({ seance, quizState, setQuizState }: {
   seance: CustomSeance;
   quizState: { pos: number; answered: boolean; answers: Record<number, number> };
-  setQuizState: React.Dispatch<React.SetStateAction<{ pos: number; answered: boolean; answers: Record<number, number> }>>;
+  setQuizState: Dispatch<SetStateAction<{ pos: number; answered: boolean; answers: Record<number, number> }>>;
 }) {
   if (quizState.pos >= seance.quiz.length) {
     const correct = Object.entries(quizState.answers).filter(([i, a]) => a === seance.quiz[parseInt(i)].ok).length;

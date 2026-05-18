@@ -10,7 +10,7 @@ function parseMarkdown(text: string): string {
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*?<\/li>(\n|$))+/gs, (match) => `<ul>${match}</ul>`)
+    .replace(/(<li>[^\n]*<\/li>(\n|$))+/g, (match) => `<ul>${match}</ul>`)
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
 }

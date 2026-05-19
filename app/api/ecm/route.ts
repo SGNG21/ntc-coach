@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+// NextResponse utilisé pour les erreurs early-return
 import Anthropic from '@anthropic-ai/sdk';
 import { ECM_MATIERES } from '@/lib/ecm-data';
 import type { EcmId } from '@/lib/ecm-data';
@@ -89,28 +90,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Action inconnue' }, { status: 400 });
     }
 
-    const response = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const raw = response.content[0]?.type === 'text' ? response.content[0].text : '';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    const readable = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    if (!jsonMatch) {
-      console.error('ECM no JSON in response:', raw.substring(0, 300));
-      return NextResponse.json({ error: 'Pas de JSON dans la réponse IA' }, { status: 500 });
-    }
-
-    try {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return NextResponse.json({ content: parsed });
-    } catch (parseErr) {
-      console.error('ECM JSON parse error:', parseErr, jsonMatch[0].substring(0, 300));
-      return NextResponse.json({ error: 'JSON invalide dans la réponse IA' }, { status: 500 });
-    }
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (error) {
     console.error('ECM API error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

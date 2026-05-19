@@ -34,6 +34,7 @@ export function EcmPage() {
   const [quizPos, setQuizPos] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizAnswered, setQuizAnswered] = useState(false);
+  const [genError, setGenError] = useState('');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -54,15 +55,13 @@ export function EcmPage() {
     setQuizPos(0);
     setQuizAnswers({});
     setQuizAnswered(false);
+    setGenError('');
   }
 
   async function generate(action: 'generate_content' | 'import_course' | 'quiz_only', text?: string) {
     const isQuizOnly = action === 'quiz_only';
-    if (isQuizOnly) {
-      setLoading(true);
-    } else {
-      action === 'import_course' ? setCourseLoading(true) : setLoading(true);
-    }
+    setGenError('');
+    action === 'import_course' ? setCourseLoading(true) : setLoading(true);
 
     try {
       const res = await fetch('/api/ecm', {
@@ -70,19 +69,34 @@ export function EcmPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ecmId: activeId, action, courseText: text }),
       });
-      const data = await res.json();
-      if (!data.content) throw new Error(data.error || 'Erreur génération');
+
+      if (!res.ok || !res.body) throw new Error(`Erreur serveur (${res.status})`);
+
+      // Accumule le stream puis parse le JSON
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+
+      const clean = fullText.replace(/```json|```/g, '').trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Réponse IA invalide — réessaie');
+      const parsed = JSON.parse(jsonMatch[0]);
 
       const updated = { ...allContent };
       if (isQuizOnly && updated[activeId]) {
         updated[activeId] = {
           ...updated[activeId],
-          quiz: [...(updated[activeId].quiz || []), ...(data.content.quiz || [])],
+          quiz: [...(updated[activeId].quiz || []), ...(parsed.quiz || [])],
         };
       } else {
         updated[activeId] = {
-          fiche: data.content.fiche || [],
-          quiz: data.content.quiz || [],
+          fiche: parsed.fiche || [],
+          quiz: parsed.quiz || [],
         };
       }
       setAllContent(updated);
@@ -90,9 +104,11 @@ export function EcmPage() {
       setQuizPos(0);
       setQuizAnswers({});
       setQuizAnswered(false);
-      if (action !== 'quiz_only') setSubTab(action === 'import_course' ? 'fiche' : 'fiche');
+      if (action !== 'quiz_only') setSubTab('fiche');
     } catch (e) {
-      console.error(e);
+      const msg = e instanceof Error ? e.message : 'Erreur inconnue';
+      setGenError(msg);
+      console.error('ECM generate error:', e);
     } finally {
       setLoading(false);
       setCourseLoading(false);
@@ -173,6 +189,14 @@ export function EcmPage() {
             </div>
           )}
         </div>
+
+        {/* Erreur génération */}
+        {genError && (
+          <div className="flex-shrink-0 mx-4 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[12px] text-red-700 flex items-center justify-between gap-2">
+            <span>❌ {genError}</span>
+            <button onClick={() => setGenError('')} className="text-red-400 hover:text-red-700 text-lg leading-none">×</button>
+          </div>
+        )}
 
         {/* Sous-navigation */}
         <nav className="flex-shrink-0 bg-white border-b border-stone-200 flex overflow-x-auto">

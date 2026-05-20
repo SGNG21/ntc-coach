@@ -8,6 +8,17 @@ import { ImportTab } from './ImportTab';
 import { EcmPage } from './EcmPage';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 
+const CCF_DURATIONS: Record<string, number> = {
+  prosp_tel: 15 * 60,
+  nego_face: 60 * 60,
+  entretien_tech: 50 * 60,
+};
+
+function formatTime(s: number): string {
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, '0')}`;
+}
+
 // ─── Tabs ───────────────────────────────────────
 const TABS = [
   { id: 'programme', label: '📋 Programme' },
@@ -79,8 +90,10 @@ export function MainApp() {
   const [score, setScore] = useState<Score>({ correct: 0, total: 0, byModule: {} });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [ccfTimeLeft, setCcfTimeLeft] = useState<number | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ccfBottomRef = useRef<HTMLDivElement>(null);
   const corrBottomRef = useRef<HTMLDivElement>(null);
   const exoRef = useRef<HTMLDivElement>(null);
@@ -100,6 +113,32 @@ export function MainApp() {
   useEffect(() => {
     corrBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [corrMessages, corrLoading]);
+
+  useEffect(() => {
+    return () => { if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current); };
+  }, []);
+
+  function startCcfTimer() {
+    if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current);
+    const duration = CCF_DURATIONS[ccfMode];
+    setCcfTimeLeft(duration);
+    ccfIntervalRef.current = setInterval(() => {
+      setCcfTimeLeft(t => {
+        if (t === null || t <= 1) {
+          clearInterval(ccfIntervalRef.current!);
+          ccfIntervalRef.current = null;
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  }
+
+  function resetCcfTimer() {
+    if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current);
+    ccfIntervalRef.current = null;
+    setCcfTimeLeft(null);
+  }
 
   // Sauvegarder session en Supabase
   const saveSession = useCallback(async (msgs: Message[], sc: Score) => {
@@ -140,11 +179,13 @@ export function MainApp() {
   }
 
   async function sendCCF(text: string) {
+    const isFirst = ccfMessages.length === 0;
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...ccfMessages, userMsg];
     const aiId = (Date.now() + 1).toString();
     setCcfMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setCcfLoading(true);
+    if (isFirst) startCcfTimer();
 
     let fullText = '';
     try {
@@ -525,13 +566,30 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                     <ModeCard
                       key={m}
                       active={ccfMode === m}
-                      onClick={() => { setCcfMode(m); setCcfMessages([]); }}
+                      onClick={() => { setCcfMode(m); setCcfMessages([]); resetCcfTimer(); }}
                       modes={{ prosp_tel: { icon: '📞', label: 'Prospection téléphonique', desc: 'Simulation 15 min' }, nego_face: { icon: '🤝', label: 'Négociation face-à-face', desc: 'Simulation 60 min' }, entretien_tech: { icon: '🎯', label: 'Entretien technique jury', desc: 'Questions REAC' } }}
                       id={m}
                     />
                   ))}
                 </div>
               </div>
+
+              {ccfTimeLeft !== null && (
+                <div className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[13px] font-semibold ${
+                  ccfTimeLeft === 0
+                    ? 'bg-red-100 border-red-400 text-red-700'
+                    : ccfTimeLeft <= 60
+                    ? 'bg-amber-100 border-amber-400 text-amber-700'
+                    : ccfTimeLeft <= (CCF_DURATIONS[ccfMode] * 0.2)
+                    ? 'bg-orange-100 border-orange-400 text-orange-700'
+                    : 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                }`}>
+                  <span>⏱ Temps restant</span>
+                  <span className="font-mono text-[15px]">
+                    {ccfTimeLeft === 0 ? '⏰ Temps écoulé !' : formatTime(ccfTimeLeft)}
+                  </span>
+                </div>
+              )}
 
               <div className="flex-1 flex flex-col bg-white rounded-xl border border-stone-200 overflow-hidden" style={{ minHeight: '400px' }}>
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 bg-stone-50">

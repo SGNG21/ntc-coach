@@ -14,6 +14,7 @@ import { ChatHistory, saveConversation } from './ChatHistory';
 import { ParcourPage } from './ParcourPage';
 import { ParcourSession } from './ParcourSession';
 import { GameParcours } from './GameParcours';
+import { loadStreak, updateStreak } from '@/lib/engagement';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 import type { SavedConversation } from './ChatHistory';
 
@@ -115,6 +116,10 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
     try { return localStorage.getItem('ntc_dark') === '1'; } catch { return false; }
   });
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [streakCount, setStreakCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    return loadStreak().count;
+  });
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -187,6 +192,7 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       setExamDaysLeft(Math.ceil((exam.getTime() - today.getTime()) / 86400000));
+      setStreakCount(loadStreak().count);
     }
     refresh();
     window.addEventListener('storage', refresh);
@@ -265,6 +271,7 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
   }
 
   async function sendChat(text: string) {
+    if (chatMessages.length === 0) updateStreak();
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
     const newMsgs = [...chatMessages, userMsg];
     const aiId = (Date.now() + 1).toString();
@@ -444,6 +451,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
   }
 
   function addScore(correct: boolean) {
+    updateStreak();
     markParcourActivity(moduleId, 'quiz');
     setScore(prev => {
       const newScore = {
@@ -489,6 +497,14 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           >
             {darkMode ? '☀️' : '🌙'}
           </button>
+          {streakCount > 0 && (
+            <button
+              onClick={() => setTab('dashboard')}
+              className="flex items-center gap-1 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full hover:bg-orange-600 transition-colors"
+            >
+              🔥 {streakCount}j
+            </button>
+          )}
           {examDaysLeft !== null && (
             <button
               onClick={() => setTab('dashboard')}

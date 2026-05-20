@@ -87,7 +87,13 @@ export function MainApp() {
   const [ficheContent, setFicheContent] = useState('');
   const [ficheLoading, setFicheLoading] = useState(false);
   const [ficheModule, setFicheModule] = useState<ModuleId>('veille');
-  const [score, setScore] = useState<Score>({ correct: 0, total: 0, byModule: {} });
+  const [score, setScore] = useState<Score>(() => {
+    try {
+      const saved = localStorage.getItem('ntc_score');
+      if (saved) return JSON.parse(saved) as Score;
+    } catch { /* ignore */ }
+    return { correct: 0, total: 0, byModule: {} };
+  });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [ccfTimeLeft, setCcfTimeLeft] = useState<number | null>(null);
@@ -113,6 +119,10 @@ export function MainApp() {
   useEffect(() => {
     corrBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [corrMessages, corrLoading]);
+
+  useEffect(() => {
+    try { localStorage.setItem('ntc_score', JSON.stringify(score)); } catch { /* ignore */ }
+  }, [score]);
 
   useEffect(() => {
     return () => { if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current); };
@@ -318,8 +328,19 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           <h1 className="text-[13px] font-semibold">NTC Coach</h1>
           <span className="hidden sm:inline text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
         </div>
-        <div className="text-[11px] bg-white/12 px-2.5 py-1 rounded-full font-mono">
-          Score : {score.correct}/{score.total}
+        <div className="flex items-center gap-1.5">
+          <div className="text-[11px] bg-white/12 px-2.5 py-1 rounded-full font-mono">
+            Score : {score.correct}/{score.total}
+          </div>
+          {score.total > 0 && (
+            <button
+              onClick={() => setScore({ correct: 0, total: 0, byModule: {} })}
+              title="Réinitialiser le score"
+              className="text-white/50 hover:text-white/90 text-[10px] transition-colors"
+            >
+              ↺
+            </button>
+          )}
         </div>
       </header>
 

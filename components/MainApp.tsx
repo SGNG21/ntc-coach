@@ -500,7 +500,8 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           {streakCount > 0 && (
             <button
               onClick={() => setTab('dashboard')}
-              className="flex items-center gap-1 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full hover:bg-orange-600 transition-colors"
+              title="Série de jours actifs"
+              className="flex items-center gap-1 bg-orange-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full hover:bg-orange-600 transition-colors"
             >
               🔥 {streakCount}j
             </button>

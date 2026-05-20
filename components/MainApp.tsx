@@ -256,6 +256,42 @@ export function MainApp() {
     }
   }
 
+  function exportFicheIA() {
+    const mod = MODULES[ficheModule];
+    const html = parseMarkdown(ficheContent);
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html lang="fr"><head>
+<meta charset="utf-8">
+<title>Fiche NTC — ${mod.label}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; font-size: 13px; color: #1a1a1a; padding: 24px 32px; max-width: 820px; margin: 0 auto; }
+  header { background: #1c3d5a; color: white; padding: 14px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 15px; font-weight: 700; }
+  header .badge { font-size: 9px; background: rgba(255,255,255,.2); padding: 3px 8px; border-radius: 4px; letter-spacing: .08em; text-transform: uppercase; }
+  .content { line-height: 1.65; }
+  .content h2 { font-size: 14px; font-weight: 700; color: #1c3d5a; margin: 16px 0 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  .content h3 { font-size: 13.5px; font-weight: 600; color: #1c3d5a; margin: 12px 0 4px; }
+  .content h4 { font-size: 12.5px; font-weight: 600; color: #374151; margin: 10px 0 3px; }
+  .content ul { padding-left: 1.2em; margin: 6px 0; }
+  .content li { margin-bottom: 4px; }
+  .content strong { font-weight: 600; }
+  footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: right; }
+  @media print { body { padding: 0; } @page { margin: 1.5cm 1.8cm; size: A4; } }
+</style>
+</head><body>
+<header>
+  <h1>📋 ${mod.label}</h1>
+  <span class="badge">Titre Pro NTC · REAC 2024</span>
+</header>
+<div class="content">${html}</div>
+<footer>NTC Coach — RNCP 39063 · Généré le ${new Date().toLocaleDateString('fr-FR')}</footer>
+<script>window.onload = () => { window.print(); }</script>
+</body></html>`);
+    win.document.close();
+  }
+
   async function generateFiche() {
     setFicheLoading(true);
     setFicheContent('');
@@ -567,9 +603,20 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               </div>
 
               {ficheContent && (
-                <div className="bg-white rounded-xl border border-stone-200 p-4 prose-chat text-[12.5px] leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: parseMarkdown(ficheContent) }}
-                />
+                <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-stone-100 bg-stone-50">
+                    <span className="text-[11.5px] font-medium text-stone-500">{MODULES[ficheModule]?.label}</span>
+                    <button
+                      onClick={exportFicheIA}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-navy-700 hover:bg-navy-800 text-white rounded-lg text-[11px] font-medium transition-colors"
+                    >
+                      📄 Exporter PDF
+                    </button>
+                  </div>
+                  <div className="p-4 prose-chat text-[12.5px] leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: parseMarkdown(ficheContent) }}
+                  />
+                </div>
               )}
 
               <StaticFiches />
@@ -992,20 +1039,61 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
   return null;
 }
 
+const STATIC_FICHES = [
+  { t: 'Veille commerciale', ccp: 'CCP 1', col: '#0f5298', items: ['<strong>Sources :</strong> Google Alerts, LinkedIn, Feedly, newsletters concurrents', '<strong>Outils IA :</strong> analyser secteur, actualiser personas en continu', '<strong>PESTEL :</strong> Politique, Économique, Social, Technologique, Écologique, Légal', '<strong>Critères REAC :</strong> outils appropriés · données actualisées · stratégie ajustée'] },
+  { t: 'Méthodes de vente', ccp: 'CCP 2', col: '#6b2d7e', items: ['<strong>CAP :</strong> Caractéristique → Avantage → Preuve', '<strong>SONCAS :</strong> Sécurité, Orgueil, Nouveauté, Confort, Argent, Sympathie', '<strong>CRAC :</strong> Creuser → Reformuler → Argumenter → Contrôler', '<strong>CROC :</strong> Contact → Raison → Objectif → Conclusion (phoning)'] },
+  { t: 'CRM & KPIs', ccp: 'CCP 1 & 2', col: '#1c3d5a', items: ['<strong>KPIs :</strong> taux de conversion, CA pipeline, leads générés, LTV', '<strong>CRM :</strong> Salesforce, HubSpot, Pipedrive — centraliser, segmenter, automatiser', '<strong>NPS :</strong> Net Promoter Score — fidélisation et satisfaction', '<strong>Omnicanalité :</strong> cohérence expérience tous points de contact'] },
+  { t: 'Juridique & RGPD', ccp: 'Transversal', col: '#7a4f0e', items: ['<strong>RGPD :</strong> consentement, droit à l\'oubli, portabilité, CNIL', '<strong>Loi Naegelen (2020-901) :</strong> authentification numéros téléphone', '<strong>CGV :</strong> éléments obligatoires, opposabilité, délais de rétractation', '<strong>Loi AGEC (2020) :</strong> économie circulaire, indice de réparabilité'] },
+];
+
+function exportStaticFiche(f: typeof STATIC_FICHES[0]) {
+  const win = window.open('', '_blank');
+  if (!win) return;
+  const items = f.items.map(i => `<li>${i}</li>`).join('');
+  win.document.write(`<!DOCTYPE html><html lang="fr"><head>
+<meta charset="utf-8">
+<title>Fiche NTC — ${f.t}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, system-ui, sans-serif; font-size: 13px; color: #1a1a1a; padding: 24px 32px; max-width: 820px; margin: 0 auto; }
+  header { color: white; padding: 14px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: ${f.col}; }
+  header h1 { font-size: 15px; font-weight: 700; }
+  header .badge { font-size: 9px; background: rgba(255,255,255,.2); padding: 3px 8px; border-radius: 4px; letter-spacing: .08em; text-transform: uppercase; }
+  ul { padding-left: 1.2em; margin: 8px 0; }
+  li { margin-bottom: 8px; line-height: 1.5; }
+  strong { font-weight: 600; }
+  footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: right; }
+  @media print { body { padding: 0; } @page { margin: 1.5cm 1.8cm; size: A4; } }
+</style>
+</head><body>
+<header>
+  <h1>📋 ${f.t}</h1>
+  <span class="badge">${f.ccp} · REAC 2024</span>
+</header>
+<ul>${items}</ul>
+<footer>NTC Coach — RNCP 39063 · Titre Pro NTC</footer>
+<script>window.onload = () => { window.print(); }</script>
+</body></html>`);
+  win.document.close();
+}
+
 function StaticFiches() {
-  const fiches = [
-    { t: 'Veille commerciale', ccp: 'CCP 1', col: '#0f5298', items: ['<strong>Sources :</strong> Google Alerts, LinkedIn, Feedly, newsletters concurrents', '<strong>Outils IA :</strong> analyser secteur, actualiser personas en continu', '<strong>PESTEL :</strong> Politique, Économique, Social, Technologique, Écologique, Légal', '<strong>Critères REAC :</strong> outils appropriés · données actualisées · stratégie ajustée'] },
-    { t: 'Méthodes de vente', ccp: 'CCP 2', col: '#6b2d7e', items: ['<strong>CAP :</strong> Caractéristique → Avantage → Preuve', '<strong>SONCAS :</strong> Sécurité, Orgueil, Nouveauté, Confort, Argent, Sympathie', '<strong>CRAC :</strong> Creuser → Reformuler → Argumenter → Contrôler', '<strong>CROC :</strong> Contact → Raison → Objectif → Conclusion (phoning)'] },
-    { t: 'CRM & KPIs', ccp: 'CCP 1 & 2', col: '#1c3d5a', items: ['<strong>KPIs :</strong> taux de conversion, CA pipeline, leads générés, LTV', '<strong>CRM :</strong> Salesforce, HubSpot, Pipedrive — centraliser, segmenter, automatiser', '<strong>NPS :</strong> Net Promoter Score — fidélisation et satisfaction', '<strong>Omnicanalité :</strong> cohérence expérience tous points de contact'] },
-    { t: 'Juridique & RGPD', ccp: 'Transversal', col: '#7a4f0e', items: ['<strong>RGPD :</strong> consentement, droit à l\'oubli, portabilité, CNIL', '<strong>Loi Naegelen (2020-901) :</strong> authentification numéros téléphone', '<strong>CGV :</strong> éléments obligatoires, opposabilité, délais de rétractation', '<strong>Loi AGEC (2020) :</strong> économie circulaire, indice de réparabilité'] },
-  ];
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {fiches.map(f => (
+      {STATIC_FICHES.map(f => (
         <div key={f.t} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-          <div className="px-3 py-2 text-white text-[11.5px] font-semibold flex items-center gap-2" style={{ background: f.col }}>
-            <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded uppercase tracking-wider">{f.ccp}</span>
-            {f.t}
+          <div className="px-3 py-2 text-white text-[11.5px] font-semibold flex items-center justify-between" style={{ background: f.col }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded uppercase tracking-wider">{f.ccp}</span>
+              {f.t}
+            </div>
+            <button
+              onClick={() => exportStaticFiche(f)}
+              title="Exporter en PDF"
+              className="text-[10px] bg-white/20 hover:bg-white/35 px-2 py-0.5 rounded transition-colors"
+            >
+              📄 PDF
+            </button>
           </div>
           <div className="p-3">
             <ul className="space-y-1.5 text-[12px] text-stone-700">

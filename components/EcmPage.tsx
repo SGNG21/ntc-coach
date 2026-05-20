@@ -11,9 +11,11 @@ import type { Message } from '@/types';
 interface FicheSection { title: string; def?: string | null; body?: string; }
 interface QuizItem { q: string; opts: string[]; ok: number; fb: string; }
 interface EcmContent { fiche: FicheSection[]; quiz: QuizItem[]; }
+interface SavedEdition { id: string; name: string; date: string; content: EcmContent; }
 
 type SubTab = 'programme' | 'fiche' | 'quiz' | 'cours' | 'alex';
 const LS_KEY = 'ntc_ecm_content';
+const LS_EDITIONS = 'ntc_ecm_editions';
 
 // ─── Persistance localStorage ───────────────────
 function loadAll(): Record<string, EcmContent> {
@@ -21,6 +23,12 @@ function loadAll(): Record<string, EcmContent> {
 }
 function saveAll(data: Record<string, EcmContent>) {
   localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+function loadEditions(): Record<string, SavedEdition[]> {
+  try { return JSON.parse(localStorage.getItem(LS_EDITIONS) || '{}'); } catch { return {}; }
+}
+function persistEditions(data: Record<string, SavedEdition[]>) {
+  localStorage.setItem(LS_EDITIONS, JSON.stringify(data));
 }
 
 // ─── Composant principal ────────────────────────
@@ -35,6 +43,10 @@ export function EcmPage() {
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [genError, setGenError] = useState('');
+  const [savedEditions, setSavedEditions] = useState<Record<string, SavedEdition[]>>({});
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [saveNameInput, setSaveNameInput] = useState('');
+  const [showEditions, setShowEditions] = useState(false);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -42,8 +54,9 @@ export function EcmPage() {
   const matiere = ECM_MATIERES[activeId];
   const content = allContent[activeId];
   const color = matiere.color;
+  const editions = savedEditions[activeId] || [];
 
-  useEffect(() => { setAllContent(loadAll()); }, []);
+  useEffect(() => { setAllContent(loadAll()); setSavedEditions(loadEditions()); }, []);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,6 +69,91 @@ export function EcmPage() {
     setQuizAnswers({});
     setQuizAnswered(false);
     setGenError('');
+    setShowSaveInput(false);
+    setShowEditions(false);
+  }
+
+  function saveEdition() {
+    if (!content) return;
+    const name = saveNameInput.trim() || `${matiere.label} — ${new Date().toLocaleDateString('fr-FR')}`;
+    const edition: SavedEdition = {
+      id: Date.now().toString(),
+      name,
+      date: new Date().toISOString(),
+      content: { fiche: content.fiche, quiz: content.quiz },
+    };
+    const updated = { ...savedEditions, [activeId]: [edition, ...(savedEditions[activeId] || [])] };
+    setSavedEditions(updated);
+    persistEditions(updated);
+    setShowSaveInput(false);
+    setSaveNameInput('');
+  }
+
+  function loadEdition(edition: SavedEdition) {
+    const updated = { ...allContent, [activeId]: edition.content };
+    setAllContent(updated);
+    saveAll(updated);
+    setQuizPos(0);
+    setQuizAnswers({});
+    setQuizAnswered(false);
+    setShowEditions(false);
+    setSubTab('fiche');
+  }
+
+  function deleteEdition(id: string) {
+    const updated = { ...savedEditions, [activeId]: (savedEditions[activeId] || []).filter(e => e.id !== id) };
+    setSavedEditions(updated);
+    persistEditions(updated);
+  }
+
+  function exportPDF(src: EcmContent, label: string, emoji: string) {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const ficheHtml = (src.fiche || []).map(f => `
+      <div class="section">
+        <div class="section-title">${f.title}</div>
+        ${f.def && f.def !== 'null' ? `<div class="def">${f.def}</div>` : ''}
+        ${f.body ? `<div class="body">${f.body}</div>` : ''}
+      </div>`).join('');
+    const quizHtml = (src.quiz || []).map((q, i) => `
+      <div class="question">
+        <div class="q-num">Q${i + 1}. ${q.q}</div>
+        <div class="opts">${q.opts.map((opt, oi) => `
+          <div class="opt${oi === q.ok ? ' correct' : ''}">${String.fromCharCode(65 + oi)}. ${opt}${oi === q.ok ? ' ✓' : ''}</div>`).join('')}
+        </div>
+        <div class="feedback">${q.fb}</div>
+      </div>`).join('');
+    const col = color;
+    const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    win.document.write(`<!DOCTYPE html><html lang="fr"><head>
+<meta charset="utf-8"><title>Fiche ECM — ${label}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:24px 20px;color:#222;font-size:13px}
+  h1{color:${col};font-size:20px;border-bottom:3px solid ${col};padding-bottom:8px;margin-bottom:4px}
+  .meta{font-size:10px;color:#999;margin-bottom:20px}
+  .section{margin-bottom:16px;page-break-inside:avoid}
+  .section-title{font-size:13px;font-weight:bold;background:${col};color:white;padding:7px 12px;border-radius:6px;margin-bottom:6px}
+  .def{border-left:3px solid ${col};padding:6px 10px;color:#555;font-style:italic;margin:4px 0 8px;font-size:12px}
+  .body ul{margin:4px 0;padding-left:18px}.body li{margin-bottom:3px;font-size:12px;line-height:1.5}
+  .body strong{color:#222}
+  .quiz-title{color:${col};font-size:16px;font-weight:bold;margin-top:28px;padding-top:12px;border-top:2px solid ${col};margin-bottom:12px}
+  .question{margin-bottom:14px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;page-break-inside:avoid}
+  .q-num{font-weight:bold;margin-bottom:6px}
+  .opt{font-size:12px;padding:2px 0;color:#555}
+  .opt.correct{color:#059669;font-weight:bold}
+  .feedback{margin-top:6px;font-size:11px;color:#555;background:#f0fdf4;padding:5px 8px;border-radius:4px}
+  @media print{body{padding:12px}}
+</style></head><body>
+<h1>${emoji} ${label} — Fiche de révision ECM</h1>
+<div class="meta">NTC Coach · REAC 2024 · RNCP 39063 · Généré le ${dateStr}</div>
+<div id="fiche">${ficheHtml}</div>
+<div class="quiz-title">❓ Quiz — ${src.quiz?.length || 0} questions</div>
+<div id="quiz">${quizHtml}</div>
+</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 600);
   }
 
   async function generate(action: 'generate_content' | 'import_course' | 'quiz_only', text?: string) {
@@ -289,13 +387,120 @@ export function EcmPage() {
                 <EmptyState color={color} onGenerate={() => generate('generate_content')} loading={loading} label="fiche de révision" />
               ) : (
                 <>
+                  {/* Barre d'actions */}
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                      onClick={() => { setShowSaveInput(v => !v); setShowEditions(false); setSaveNameInput(''); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all"
+                      style={{ borderColor: color + '60', color }}
+                    >
+                      💾 Sauvegarder
+                    </button>
+                    <button
+                      onClick={() => exportPDF(content, matiere.label, matiere.emoji)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all"
+                      style={{ borderColor: color + '60', color }}
+                    >
+                      📄 Exporter PDF
+                    </button>
+                    <button
+                      onClick={() => { setShowEditions(v => !v); setShowSaveInput(false); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border transition-all"
+                      style={editions.length > 0 ? { borderColor: color, color, background: color + '12' } : { borderColor: '#d1d5db', color: '#6b7280' }}
+                    >
+                      📚 Mes éditions{editions.length > 0 ? ` (${editions.length})` : ''}
+                    </button>
+                    <button
+                      onClick={() => generate('generate_content')}
+                      disabled={loading}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-white transition-opacity disabled:opacity-60"
+                      style={{ background: color + 'aa' }}
+                    >
+                      {loading && <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/></svg>}
+                      🔄 Régénérer
+                    </button>
+                  </div>
+
+                  {/* Formulaire de sauvegarde */}
+                  {showSaveInput && (
+                    <div className="bg-white rounded-xl border p-3 flex gap-2 items-center" style={{ borderColor: color + '40' }}>
+                      <input
+                        autoFocus
+                        value={saveNameInput}
+                        onChange={e => setSaveNameInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveEdition()}
+                        placeholder={`Nom de l'édition (ex: Version cours importé)`}
+                        className="flex-1 text-[12px] px-2.5 py-1.5 border border-stone-200 rounded-lg focus:outline-none focus:border-stone-400"
+                      />
+                      <button
+                        onClick={saveEdition}
+                        className="px-3 py-1.5 rounded-lg text-white text-[12px] font-medium flex-shrink-0"
+                        style={{ background: color }}
+                      >
+                        Sauvegarder
+                      </button>
+                      <button onClick={() => setShowSaveInput(false)} className="text-stone-400 hover:text-stone-600 text-lg leading-none">×</button>
+                    </div>
+                  )}
+
+                  {/* Panneau des éditions sauvegardées */}
+                  {showEditions && (
+                    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                      <div className="px-3 py-2.5 bg-stone-50 border-b border-stone-200 text-[12px] font-semibold text-stone-600">
+                        📚 Éditions sauvegardées — {matiere.label}
+                      </div>
+                      {editions.length === 0 ? (
+                        <div className="px-3 py-4 text-[12px] text-stone-400 text-center">
+                          Aucune édition sauvegardée pour cette matière.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-stone-100">
+                          {editions.map(ed => (
+                            <div key={ed.id} className="flex items-center gap-2 px-3 py-2.5">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[12.5px] font-medium text-stone-800 truncate">{ed.name}</div>
+                                <div className="text-[10.5px] text-stone-400">
+                                  {new Date(ed.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })} · {ed.content.fiche?.length ?? 0} sections · {ed.content.quiz?.length ?? 0} questions
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => loadEdition(ed)}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-white flex-shrink-0"
+                                style={{ background: color }}
+                                title="Charger cette édition"
+                              >
+                                Charger
+                              </button>
+                              <button
+                                onClick={() => exportPDF(ed.content, matiere.label, matiere.emoji)}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-medium border flex-shrink-0"
+                                style={{ borderColor: color + '60', color }}
+                                title="Exporter en PDF"
+                              >
+                                PDF
+                              </button>
+                              <button
+                                onClick={() => deleteEdition(ed.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0 text-base"
+                                title="Supprimer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sections de la fiche */}
                   {content.fiche.map((f, i) => (
                     <div key={i} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
                       <div className="px-3 py-2 text-white text-[11.5px] font-bold" style={{ background: color + 'dd' }}>
                         {f.title}
                       </div>
                       <div className="p-3">
-                        {f.def && (
+                        {f.def && f.def !== 'null' && (
                           <div className="border-l-2 pl-3 py-1 mb-2 text-[12.5px] leading-relaxed text-stone-700 italic" style={{ borderColor: color }}>
                             {f.def}
                           </div>
@@ -310,14 +515,6 @@ export function EcmPage() {
                       </div>
                     </div>
                   ))}
-                  <button
-                    onClick={() => generate('generate_content')}
-                    disabled={loading}
-                    className="py-2.5 rounded-xl text-white text-[12px] font-medium flex items-center justify-center gap-2 transition-opacity disabled:opacity-60"
-                    style={{ background: color + 'aa' }}
-                  >
-                    🔄 Régénérer la fiche
-                  </button>
                 </>
               )}
             </div>

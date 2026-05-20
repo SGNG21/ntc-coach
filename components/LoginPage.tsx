@@ -31,10 +31,19 @@ export function LoginPage() {
     }
 
     if (mode === 'register') {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { display_name: name || email.split('@')[0] } },
+      });
+      if (!error && data.user) {
+        await supabase.from('user_profiles').upsert({
+          id: data.user.id,
+          display_name: name || email.split('@')[0],
+        }, { onConflict: 'id' });
+      }
       setLoading(false);
       if (error) { setMsg({ type: 'err', text: error.message }); return; }
-      setMsg({ type: 'ok', text: 'Compte créé ! Vérifie ton email pour confirmer.' });
+      setMsg({ type: 'ok', text: 'Compte créé ! Tu peux te connecter.' });
       return;
     }
 

@@ -212,10 +212,8 @@ export function GameParcours({ onBack }: { onBack: () => void }) {
     } else {
       setCombo(0);
       setMistakes(m => m + 1);
-      if (letter !== '__timeout__') {
-        setLives(l => l - 1);
-        setShakeTrigger(n => n + 1);
-      }
+      setLives(l => l - 1);
+      if (letter !== '__timeout__') setShakeTrigger(n => n + 1);
     }
   }
 
@@ -400,7 +398,7 @@ export function GameParcours({ onBack }: { onBack: () => void }) {
           <div className="flex-1 h-3 bg-stone-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${questions.length ? ((qIdx) / questions.length) * 100 : 0}%`, background: CCP_COLOR[mod.ccp] }}
+              style={{ width: `${questions.length ? ((qIdx + 1) / questions.length) * 100 : 0}%`, background: CCP_COLOR[mod.ccp] }}
             />
           </div>
           <div className="flex gap-1">

@@ -8,27 +8,37 @@ import { Chatbot } from '@/components/Chatbot';
 import { syncFromCloud } from '@/lib/sync';
 
 export default function Home() {
-  const [user, setUser]       = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]           = useState<User | null>(null);
+  const [displayName, setDisplay] = useState('');
+  const [loading, setLoading]     = useState(true);
+
+  async function loadDisplayName(u: User) {
+    const name = u.user_metadata?.display_name as string | undefined;
+    if (name) { setDisplay(name); return; }
+    if (!supabase) return;
+    const { data } = await supabase.from('user_profiles').select('display_name').single();
+    if (data?.display_name) setDisplay(data.display_name as string);
+    else setDisplay(u.email?.split('@')[0] ?? '');
+  }
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data }) => {
+      const u = data.session?.user ?? null;
+      setUser(u);
+      if (u) { await syncFromCloud(); await loadDisplayName(u); }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) {
-        // Charger les données cloud dans localStorage au login
-        await syncFromCloud();
-      }
+      if (u) { await syncFromCloud(); await loadDisplayName(u); }
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -46,7 +56,7 @@ export default function Home() {
 
   return (
     <main>
-      <MainApp userId={user.id} userEmail={user.email} />
+      <MainApp userId={user.id} userEmail={user.email} displayName={displayName} />
       <Chatbot />
     </main>
   );

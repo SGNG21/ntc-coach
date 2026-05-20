@@ -81,7 +81,7 @@ const TYPE_STYLES = {
   tr: { active: 'bg-navy-50 text-navy-700 border-navy-500/20', dot: 'bg-navy-500' },
 };
 
-export function MainApp({ userId, userEmail }: { userId?: string; userEmail?: string }) {
+export function MainApp({ userId, userEmail, displayName }: { userId?: string; userEmail?: string; displayName?: string }) {
   const [tab, setTab] = useState('programme');
   const [moduleId, setModuleId] = useState<ModuleId>('veille');
   const [moduleType, setModuleType] = useState<'c1' | 'c2' | 'tr'>('c1');
@@ -188,17 +188,21 @@ export function MainApp({ userId, userEmail }: { userId?: string; userEmail?: st
     return () => { if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current); };
   }, []);
 
-  // ── Sync cloud auto ──
+  // ── Sync cloud : à la fermeture + quand le score change ──
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!userId) return;
-    const interval = setInterval(() => syncToCloud(), 30_000);
     const onUnload = () => syncToCloud();
     window.addEventListener('beforeunload', onUnload);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('beforeunload', onUnload);
-    };
+    return () => window.removeEventListener('beforeunload', onUnload);
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => syncToCloud(), 5_000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [score, userId]);
 
   function startCcfTimer() {
     if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current);
@@ -499,7 +503,9 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           </button>
           {userEmail && (
             <div className="flex items-center gap-1.5 pl-1 border-l border-white/20 ml-1">
-              <span className="hidden sm:inline text-[10px] text-white/60 max-w-[80px] truncate">{userEmail.split('@')[0]}</span>
+              <span className="hidden sm:inline text-[10px] text-white/70 font-medium max-w-[80px] truncate">
+                {displayName || userEmail.split('@')[0]}
+              </span>
               <button
                 onClick={async () => { await syncToCloud(); await supabase?.auth.signOut(); }}
                 title="Se déconnecter"

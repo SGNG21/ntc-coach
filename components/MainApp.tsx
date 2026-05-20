@@ -123,20 +123,24 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
   const exoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (tab !== 'revision') return;
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, chatLoading]);
+  }, [chatMessages, chatLoading, tab]);
 
   useEffect(() => {
+    if (tab !== 'exercices') return;
     if (exoData) exoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [exoData]);
+  }, [exoData, tab]);
 
   useEffect(() => {
+    if (tab !== 'ccf') return;
     ccfBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [ccfMessages, ccfLoading]);
+  }, [ccfMessages, ccfLoading, tab]);
 
   useEffect(() => {
+    if (tab !== 'exercices') return;
     corrBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [corrMessages, corrLoading]);
+  }, [corrMessages, corrLoading, tab]);
 
   useEffect(() => {
     try { localStorage.setItem('ntc_score', JSON.stringify(score)); } catch { /* ignore */ }
@@ -148,14 +152,19 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
     else { root.classList.remove('dark'); localStorage.setItem('ntc_dark', '0'); }
   }, [darkMode]);
 
+  const chatMessagesRef = useRef<Message[]>([]);
+  useEffect(() => { chatMessagesRef.current = chatMessages; }, [chatMessages]);
+
   const prevModuleId = useRef<ModuleId>(moduleId);
   useEffect(() => {
     if (prevModuleId.current !== moduleId) {
-      const msgs = chatMessages.filter(m => m.content);
+      const msgs = chatMessagesRef.current.filter(m => m.content);
       if (msgs.length >= 2) saveConversation(prevModuleId.current, msgs);
       prevModuleId.current = moduleId;
+      setChatMessages([]);
     }
-  }, [moduleId, chatMessages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleId]);
 
   function markParcourActivity(mid: ModuleId, activity: 'cours' | 'quiz' | 'exercice' | 'fiche') {
     try {

@@ -38,6 +38,16 @@ function daysUntil(dateStr: string): number {
 function CountdownCard({ examDate, onDateChange }: { examDate: string; onDateChange: (d: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState(examDate);
+  const [midnightTick, setMidnightTick] = useState(0);
+
+  // Replanifie le rafraîchissement après chaque minuit
+  useEffect(() => {
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const ms = tomorrow.getTime() - now.getTime();
+    const t = setTimeout(() => setMidnightTick(n => n + 1), ms);
+    return () => clearTimeout(t);
+  }, [midnightTick]);
 
   const days = examDate ? daysUntil(examDate) : null;
   const passed = days !== null && days < 0;

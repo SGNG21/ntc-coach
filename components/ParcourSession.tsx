@@ -18,6 +18,7 @@ interface ModuleResult {
   moduleId: ModuleId;
   explanationDone: boolean;
   exerciseScore: number | null; // null = skipped
+  totalQuestions?: number;
 }
 
 /* ─── Module groups ───────────────────────────────── */
@@ -146,7 +147,7 @@ export function ParcourSession({ onClose }: { onClose: () => void }) {
       setCurrent(c => c + 1);
       setPicked(null);
     } else {
-      finishModule(exoCorrect + (picked === questions[current]?.answer ? 0 : 0));
+      finishModule(exoCorrect);
     }
   }
 
@@ -156,6 +157,7 @@ export function ParcourSession({ onClose }: { onClose: () => void }) {
       moduleId: modules[cursor],
       explanationDone: explanation.length > 0,
       exerciseScore: score ?? (questions.length > 0 ? exoCorrect : null),
+      totalQuestions: questions.length > 0 ? questions.length : undefined,
     };
     const newResults = [...results, result];
     setResults(newResults);
@@ -407,7 +409,7 @@ export function ParcourSession({ onClose }: { onClose: () => void }) {
               <div className="text-[15px] font-bold text-navy-700">{mod.label.replace(/^CP\d+ — /, '')} terminé</div>
               {results[results.length - 1]?.exerciseScore !== null && (
                 <div className="text-[13px] text-stone-500">
-                  Score exercice : <strong>{results[results.length - 1].exerciseScore}/{questions.length}</strong>
+                  Score exercice : <strong>{results[results.length - 1].exerciseScore}/{results[results.length - 1].totalQuestions ?? questions.length}</strong>
                 </div>
               )}
               <div className="text-[12px] text-stone-400">
@@ -434,8 +436,8 @@ export function ParcourSession({ onClose }: { onClose: () => void }) {
               <div className="flex flex-col gap-2">
                 {results.map(r => {
                   const m = MODULES[r.moduleId];
-                  const pct = r.exerciseScore !== null && questions.length > 0
-                    ? Math.round((r.exerciseScore / (questions.length || 4)) * 100) : null;
+                  const pct = r.exerciseScore !== null && (r.totalQuestions ?? 0) > 0
+                    ? Math.round((r.exerciseScore / (r.totalQuestions || 4)) * 100) : null;
                   return (
                     <div key={r.moduleId} className="flex items-center gap-3 px-3 py-2.5 bg-stone-50 rounded-lg border border-stone-200">
                       <div className="w-2 h-2 rounded-full flex-shrink-0 bg-emerald-500" />

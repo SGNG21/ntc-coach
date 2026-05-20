@@ -164,6 +164,7 @@ export function GameParcours({ onBack }: { onBack: () => void }) {
     setSessionXP(0);
     setMistakes(0);
     setLives(3);
+    setShakeTrigger(0);
     setScreen('quiz');
     try {
       const res = await fetch('/api/generate-exercise', {
@@ -228,6 +229,7 @@ export function GameParcours({ onBack }: { onBack: () => void }) {
     } else {
       setQIdx(i => i + 1);
       setPicked(null);
+      setShakeTrigger(0);
       startTimer();
     }
   }

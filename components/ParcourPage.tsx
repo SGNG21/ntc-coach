@@ -106,13 +106,21 @@ export function ParcourPage({
   const [parcours, setParcours] = useState<Parcours>({});
   const [history, setHistory] = useState<ReturnType<typeof loadHistory>>([]);
 
+  // Charge l'historique une seule fois au montage (scan localStorage coûteux)
   useEffect(() => {
-    let p = load();
-    p = mergeFromScore(p, score);
-    p = mergeFromHistory(p);
-    save(p);
+    const p = mergeFromHistory(load());
     setParcours(p);
     setHistory(loadHistory().slice(0, 15));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Met à jour uniquement la partie score quand score change
+  useEffect(() => {
+    setParcours(prev => {
+      const next = mergeFromScore({ ...prev }, score);
+      save(next);
+      return next;
+    });
   }, [score]);
 
   const update = useCallback((next: Parcours) => {

@@ -49,3 +49,25 @@ GROUP BY module_id;
 -- À activer quand on ajoutera l'authentification
 ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE scores DISABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- Auth & profils utilisateurs
+-- À exécuter dans l'éditeur SQL Supabase
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id           UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  display_name TEXT,
+  score        JSONB DEFAULT '{"correct":0,"total":0,"byModule":{}}',
+  parcours     JSONB DEFAULT '{}',
+  game_stars   JSONB DEFAULT '{}',
+  game_xp      INTEGER DEFAULT 0,
+  exam_date    TEXT DEFAULT '',
+  chat_history JSONB DEFAULT '[]',
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Lecture profil propre"  ON user_profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Écriture profil propre" ON user_profiles FOR ALL    USING (auth.uid() = id);

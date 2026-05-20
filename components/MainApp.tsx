@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MODULES } from '@/lib/reac-data';
 import { streamChat } from '@/lib/stream';
+import { supabase } from '@/lib/supabase';
+import { syncToCloud } from '@/lib/sync';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
@@ -79,7 +81,7 @@ const TYPE_STYLES = {
   tr: { active: 'bg-navy-50 text-navy-700 border-navy-500/20', dot: 'bg-navy-500' },
 };
 
-export function MainApp() {
+export function MainApp({ userId, userEmail }: { userId?: string; userEmail?: string }) {
   const [tab, setTab] = useState('programme');
   const [moduleId, setModuleId] = useState<ModuleId>('veille');
   const [moduleType, setModuleType] = useState<'c1' | 'c2' | 'tr'>('c1');
@@ -185,6 +187,18 @@ export function MainApp() {
   useEffect(() => {
     return () => { if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current); };
   }, []);
+
+  // ── Sync cloud auto ──
+  useEffect(() => {
+    if (!userId) return;
+    const interval = setInterval(() => syncToCloud(), 30_000);
+    const onUnload = () => syncToCloud();
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', onUnload);
+    };
+  }, [userId]);
 
   function startCcfTimer() {
     if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current);
@@ -483,6 +497,18 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           >
             Score : {score.correct}/{score.total}
           </button>
+          {userEmail && (
+            <div className="flex items-center gap-1.5 pl-1 border-l border-white/20 ml-1">
+              <span className="hidden sm:inline text-[10px] text-white/60 max-w-[80px] truncate">{userEmail.split('@')[0]}</span>
+              <button
+                onClick={async () => { await syncToCloud(); await supabase?.auth.signOut(); }}
+                title="Se déconnecter"
+                className="text-white/50 hover:text-white text-[11px] transition-colors"
+              >
+                ⏏
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MODULES } from '@/lib/reac-data';
 import { streamChat } from '@/lib/stream';
+import { updateSRS } from '@/lib/engagement';
 import type { ModuleId } from '@/types';
 
 /* ─── Types ───────────────────────────────────────── */
@@ -159,6 +160,12 @@ export function ParcourSession({ onClose }: { onClose: () => void }) {
       exerciseScore: score ?? (questions.length > 0 ? exoCorrect : null),
       totalQuestions: questions.length > 0 ? questions.length : undefined,
     };
+
+    // Call SRS only when there was an exercise with a score
+    if (result.exerciseScore !== undefined && result.exerciseScore !== null && result.totalQuestions && result.totalQuestions > 0) {
+      updateSRS(modules[cursor], (result.exerciseScore / result.totalQuestions) * 100);
+    }
+
     const newResults = [...results, result];
     setResults(newResults);
 

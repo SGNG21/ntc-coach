@@ -71,3 +71,7 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Lecture profil propre"  ON user_profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Écriture profil propre" ON user_profiles FOR ALL    USING (auth.uid() = id);
+
+-- Streak + SRS (added 2026-05-21)
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS streak JSONB DEFAULT '{"count":0,"lastDate":"","longest":0}';
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS srs    JSONB DEFAULT '{}';

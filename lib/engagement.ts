@@ -19,8 +19,17 @@ export interface SrsEntry {
 
 export type SrsData = Record<string, SrsEntry>;
 
+// Fix 1 — Explicit SSR guard
+function hasLS(): boolean {
+  return typeof window !== 'undefined';
+}
+
+// Fix 2 — Local timezone date string (replaces UTC-based toISOString)
 function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function todayStr(): string {
@@ -33,8 +42,9 @@ function yesterdayStr(): string {
   return toDateStr(d);
 }
 
+// Fix 2 — Parse dateStr as local midnight to avoid UTC-offset shift
 function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr);
+  const d = new Date(`${dateStr}T00:00:00`);
   d.setDate(d.getDate() + n);
   return toDateStr(d);
 }
@@ -46,14 +56,21 @@ function dispatchStorage() {
 // ── Streak ──────────────────────────────────────────────────────────────────
 
 export function loadStreak(): StreakData {
+  // Fix 1 — explicit SSR guard
+  if (!hasLS()) return { count: 0, lastDate: '', longest: 0 };
   try {
-    return JSON.parse(localStorage.getItem(LS_STREAK) || 'null') ?? { count: 0, lastDate: '', longest: 0 };
+    // Fix 4 — merge with defaults to handle partial stored objects
+    const defaults: StreakData = { count: 0, lastDate: '', longest: 0 };
+    const parsed = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+    return parsed ? { ...defaults, ...parsed } : defaults;
   } catch {
     return { count: 0, lastDate: '', longest: 0 };
   }
 }
 
 function saveStreak(s: StreakData): void {
+  // Fix 1 — explicit SSR guard
+  if (!hasLS()) return;
   try { localStorage.setItem(LS_STREAK, JSON.stringify(s)); } catch { /* ignore */ }
 }
 
@@ -75,14 +92,20 @@ export function updateStreak(): StreakData {
 // ── SRS ─────────────────────────────────────────────────────────────────────
 
 export function loadSRS(): SrsData {
+  // Fix 1 — explicit SSR guard
+  if (!hasLS()) return {};
   try {
-    return JSON.parse(localStorage.getItem(LS_SRS) || 'null') ?? {};
+    // Fix 4 — ensure parsed value is a non-null object
+    const parsed = JSON.parse(localStorage.getItem(LS_SRS) || 'null');
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
 
 function saveSRS(data: SrsData): void {
+  // Fix 1 — explicit SSR guard
+  if (!hasLS()) return;
   try { localStorage.setItem(LS_SRS, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
@@ -93,14 +116,17 @@ function scoreToInterval(pct: number): number {
   return 14;
 }
 
-export function updateSRS(moduleId: ModuleId | string, scorePercent: number): void {
+// Fix 6 — moduleId: string (ModuleId | string collapses to string)
+export function updateSRS(moduleId: string, scorePercent: number): void {
+  // Fix 5 — clamp scorePercent to [0, 100]
+  const clamped = Math.max(0, Math.min(100, scorePercent));
   const data = loadSRS();
   const prev = data[moduleId];
-  const interval = scoreToInterval(scorePercent);
+  const interval = scoreToInterval(clamped);
   data[moduleId] = {
     interval,
     dueDate: addDays(todayStr(), interval),
-    lastScore: Math.round(scorePercent),
+    lastScore: Math.round(clamped),
     reviewCount: (prev?.reviewCount ?? 0) + 1,
   };
   saveSRS(data);
@@ -116,8 +142,11 @@ export function getDueModules(): string[] {
 
 export function getDaysUntilNextDue(): number | null {
   const t = todayStr();
+  // Fix 3 — parse as local midnight to avoid UTC-offset shift
   const delays = Object.values(loadSRS())
     .filter(e => e.dueDate > t)
-    .map(e => Math.ceil((new Date(e.dueDate).getTime() - new Date(t).getTime()) / 86400000));
+    .map(e => Math.ceil(
+      (new Date(`${e.dueDate}T00:00:00`).getTime() - new Date(`${t}T00:00:00`).getTime()) / 86400000
+    ));
   return delays.length === 0 ? null : Math.min(...delays);
 }

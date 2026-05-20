@@ -38,8 +38,8 @@ function writeLS(data: Awaited<ReturnType<typeof loadProfile>>) {
   localStorage.setItem(LS_KEYS.game_xp, String(data.game_xp ?? 0));
   if (data.exam_date) localStorage.setItem(LS_KEYS.exam_date, data.exam_date);
   set(LS_KEYS.chat_history, data.chat_history);
-  if (data.streak != null) set(LS_KEYS.streak, data.streak);
-  if (data.srs    != null) set(LS_KEYS.srs,    data.srs);
+  set(LS_KEYS.streak, data.streak);
+  set(LS_KEYS.srs,    data.srs);
 }
 
 export async function loadProfile(): Promise<null | {

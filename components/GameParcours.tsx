@@ -221,11 +221,10 @@ export function GameParcours({ onClose }: { onClose: () => void }) {
 
   /* ── Next question ── */
   function nextQuestion() {
-    const newLives = lives - (picked !== questions[qIdx]?.answer && picked !== null ? 0 : 0);
-    if (newLives <= 0 || lives <= 0) {
-      if (mistakes >= 3) { finishQuiz(); return; }
+    if (lives <= 0) {
+      finishQuiz();
+      return;
     }
-
     if (qIdx + 1 >= questions.length) {
       finishQuiz();
     } else {
@@ -340,33 +339,37 @@ export function GameParcours({ onClose }: { onClose: () => void }) {
   /* ── Render THEORY ── */
   if (screen === 'theory') {
     const savoirs = mod.savoirs ?? [];
-    const points = savoirs.slice(0, 4);
+    const points = savoirs.slice(0, 5);
     const isLast = theoryStep >= points.length - 1;
+    const text = points[theoryStep] ?? '';
+    // strip HTML tags for clean display
+    const clean = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
     return (
       <div className="fixed inset-0 z-50 flex flex-col" style={{ background: CCP_COLOR[mod.ccp] ?? '#1c3d5a' }}>
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
           <button onClick={() => setScreen('map')} className="text-white/60 hover:text-white text-[13px]">← Carte</button>
-          <div className="text-white/60 text-[11px]">{theoryStep + 1}/{points.length}</div>
-          <button onClick={loadQuiz} className="text-white/60 hover:text-white text-[11px]">Passer →</button>
+          <div className="text-white/60 text-[11px]">{theoryStep + 1} / {points.length}</div>
+          <button onClick={loadQuiz} className="text-white/80 hover:text-white text-[11px] bg-white/10 px-3 py-1 rounded-full">Passer le cours →</button>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        <div className="flex-1 flex flex-col items-center justify-center px-5 gap-5">
           <div className="text-center">
-            <div className="text-5xl mb-3">📖</div>
+            <div className="text-4xl mb-2">📖</div>
             <div className="text-white/60 text-[11px] uppercase tracking-widest mb-1">{mod.label.replace(/^CP\d+ — /, '')}</div>
-            <div className="text-white font-bold text-[16px]">Point clé {theoryStep + 1}</div>
+            <div className="text-white font-bold text-[17px]">Point clé {theoryStep + 1}</div>
           </div>
 
           <div
             key={theoryStep}
-            className="bg-white/15 backdrop-blur rounded-2xl p-5 text-white text-[13px] leading-relaxed max-w-sm w-full animate-pop-in"
-            dangerouslySetInnerHTML={{ __html: points[theoryStep] ?? '' }}
-          />
+            className="bg-white/15 backdrop-blur rounded-2xl p-6 w-full max-w-lg animate-pop-in"
+          >
+            <p className="text-white text-[15px] leading-relaxed">{clean}</p>
+          </div>
 
           <div className="flex gap-1.5">
             {points.map((_, i) => (
-              <div key={i} className={`h-1.5 rounded-full transition-all ${i === theoryStep ? 'w-6 bg-white' : i < theoryStep ? 'w-2 bg-white/60' : 'w-2 bg-white/25'}`} />
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === theoryStep ? 'w-8 bg-white' : i < theoryStep ? 'w-2 bg-white/60' : 'w-2 bg-white/25'}`} />
             ))}
           </div>
         </div>
@@ -374,7 +377,8 @@ export function GameParcours({ onClose }: { onClose: () => void }) {
         <div className="px-5 pb-8 flex-shrink-0">
           <button
             onClick={() => isLast ? loadQuiz() : setTheoryStep(s => s + 1)}
-            className="w-full py-4 bg-white text-navy-700 rounded-2xl font-bold text-[14px] shadow-xl transition-all active:scale-95"
+            className="w-full py-4 bg-white rounded-2xl font-bold text-[15px] shadow-xl transition-all active:scale-95"
+            style={{ color: CCP_COLOR[mod.ccp] ?? '#1c3d5a' }}
           >
             {isLast ? '✏️ Commencer le quiz !' : 'Suivant →'}
           </button>

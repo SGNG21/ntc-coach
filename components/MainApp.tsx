@@ -548,7 +548,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </aside>
 
         {/* Content */}
-        <main className={tab === 'ecm' ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-y-auto p-4'}>
+        <main className={tab === 'ecm' ? 'flex-1 overflow-hidden flex flex-col' : tab === 'revision' ? 'flex-1 overflow-hidden flex flex-col p-4' : 'flex-1 overflow-y-auto p-4'}>
 
           {/* ── DASHBOARD ── */}
           {tab === 'dashboard' && (
@@ -590,41 +590,52 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
           {/* ── RÉVISION ── */}
           {tab === 'revision' && (
-            <div className="flex flex-col gap-3 h-full">
-              {/* Mode selector */}
-              <div className="bg-white rounded-xl border border-stone-200 p-3 flex-shrink-0">
-                <div className="text-[13px] font-semibold text-navy-700 mb-2">🎯 Mode de révision — {mod.label}</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                  {(['expliquer', 'quiz', 'scenario', 'criteres'] as ChatMode[]).map(m => (
-                    <ModeCard
-                      key={m}
-                      active={chatMode === m}
-                      onClick={() => setChatMode(m)}
-                      modes={{ expliquer: { icon: '📖', label: 'Cours complet', desc: 'Explication REAC' }, quiz: { icon: '❓', label: 'Quiz', desc: 'Questions sans réponses' }, scenario: { icon: '🎭', label: 'Mise en situation', desc: 'Cas BtoB réaliste' }, criteres: { icon: '🎯', label: 'Critères CCF', desc: 'Ce que le jury évalue' } }}
-                      id={m}
-                    />
-                  ))}
+            <div className="flex flex-col gap-2 h-full min-h-0">
+              {/* Mode selector compact */}
+              <div className="bg-white rounded-xl border border-stone-200 px-3 py-2.5 flex-shrink-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-[12px] font-semibold text-navy-700 flex-shrink-0">🎯 {mod.label.replace(/^CP\d+ — /, '')}</span>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {([
+                      { id: 'expliquer', icon: '📖', label: 'Cours' },
+                      { id: 'quiz',      icon: '❓', label: 'Quiz' },
+                      { id: 'scenario',  icon: '🎭', label: 'Scénario' },
+                      { id: 'criteres',  icon: '🎯', label: 'CCF' },
+                    ] as { id: ChatMode; icon: string; label: string }[]).map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setChatMode(m.id)}
+                        className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${
+                          chatMode === m.id
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : 'border-stone-200 text-stone-500 hover:border-navy-500 hover:text-navy-700'
+                        }`}
+                      >
+                        {m.icon} {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ml-auto"><ChatHistory onLoad={loadConversation} /></div>
                 </div>
                 {/* Quick prompts */}
-                <div className="flex flex-wrap gap-1.5 items-center">
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
                   {(mod.qps || []).map(qp => (
                     <button
                       key={qp}
                       onClick={() => sendChat(qp)}
-                      className="text-[11px] px-2.5 py-1 bg-navy-50 text-navy-700 border border-navy-500/18 rounded-full hover:bg-navy-700 hover:text-white transition-colors"
+                      className="text-[10.5px] px-2.5 py-1 bg-navy-50 text-navy-700 border border-navy-500/18 rounded-full hover:bg-navy-700 hover:text-white transition-colors whitespace-nowrap flex-shrink-0"
                     >
                       {qp}
                     </button>
                   ))}
-                  <ChatHistory onLoad={loadConversation} />
                 </div>
               </div>
 
-              {/* Chat */}
+              {/* Chat — prend toute la hauteur restante */}
               <div className="flex-1 flex flex-col bg-white rounded-xl border border-stone-200 overflow-hidden min-h-0">
-                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 bg-stone-50">
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-stone-50">
                   {chatMessages.length === 0 && (
-                    <div className="text-center text-stone-400 text-[12px] py-8">
+                    <div className="text-center text-stone-400 text-[12px] py-12">
                       👆 Choisis un mode et pose ta question, ou clique sur un raccourci
                     </div>
                   )}
@@ -835,6 +846,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </main>
       </div>
     </div>
+    {gameOpen && <GameParcours onClose={() => setGameOpen(false)} />}
     {sessionOpen && <ParcourSession onClose={() => setSessionOpen(false)} />}
     </>
   );

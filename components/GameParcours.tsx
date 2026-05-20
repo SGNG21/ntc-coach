@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MODULES } from '@/lib/reac-data';
 import type { ModuleId } from '@/types';
 
@@ -92,18 +93,19 @@ function TimerArc({ seconds, total }: { seconds: number; total: number }) {
   );
 }
 
-/* ─── Main component ──────────────────────────── */
+/* ─── Portal wrapper — garantit le montage côté client uniquement ── */
 export function GameParcours({ onClose }: { onClose: () => void }) {
-  const [screen, setScreen] = useState<Screen>('map');
-  const [stars, setStars] = useState<Record<string, number>>({});
-  const [totalXP, setTotalXP] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return createPortal(<GameParcoursInner onClose={onClose} />, document.body);
+}
 
-  useEffect(() => {
-    setStars(loadStars());
-    setTotalXP(loadXP());
-    setReady(true);
-  }, []);
+/* ─── Composant interne ───────────────────────── */
+function GameParcoursInner({ onClose }: { onClose: () => void }) {
+  const [screen, setScreen] = useState<Screen>('map');
+  const [stars, setStars] = useState<Record<string, number>>(loadStars);
+  const [totalXP, setTotalXP] = useState<number>(loadXP);
 
   // Current module session
   const [moduleId, setModuleId] = useState<ModuleId>('veille');
@@ -253,18 +255,6 @@ export function GameParcours({ onClose }: { onClose: () => void }) {
     setTotalXP(newXP);
     saveXP(newXP);
     setScreen('result');
-  }
-
-  /* ── Loading ── */
-  if (!ready) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-navy-700 to-navy-900">
-        <div className="text-center">
-          <div className="text-5xl mb-4 animate-bounce">🎮</div>
-          <div className="text-white text-[14px] font-semibold">Chargement…</div>
-        </div>
-      </div>
-    );
   }
 
   /* ── Render MAP ── */

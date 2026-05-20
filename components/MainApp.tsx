@@ -297,8 +297,19 @@ export function MainApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moduleId, mode: exoMode }),
       });
-      const data = await res.json();
-      setExoData(data.exercise);
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let raw = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('no json');
+      setExoData(JSON.parse(match[0]));
       setExoCount(n => n + 1);
     } catch {
       setExoData({ error: 'Erreur de génération. Réessayez.' });

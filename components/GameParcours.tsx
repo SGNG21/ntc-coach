@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MODULES } from '@/lib/reac-data';
 import type { ModuleId } from '@/types';
+import { updateSRS } from '@/lib/engagement';
 
 /* ─── Constants ───────────────────────────────── */
 const ALL_MODULES: ModuleId[] = [
@@ -245,6 +246,9 @@ export function GameParcours({ onBack }: { onBack: () => void }) {
     const newXP = totalXP + sessionXP;
     setTotalXP(newXP);
     saveXP(newXP);
+    if (questions.length > 0) {
+      updateSRS(moduleId, ((questions.length - mistakes) / questions.length) * 100);
+    }
     setScreen('result');
   }
 

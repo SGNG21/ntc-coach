@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { MODULES } from '@/lib/reac-data';
 import type { ModuleId } from '@/types';
 
@@ -93,16 +92,8 @@ function TimerArc({ seconds, total }: { seconds: number; total: number }) {
   );
 }
 
-/* ─── Portal wrapper — garantit le montage côté client uniquement ── */
-export function GameParcours({ onClose }: { onClose: () => void }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return null;
-  return createPortal(<GameParcoursInner onClose={onClose} />, document.body);
-}
-
-/* ─── Composant interne ───────────────────────── */
-function GameParcoursInner({ onClose }: { onClose: () => void }) {
+/* ─── Main component (rendu comme une page, pas une modale) ── */
+export function GameParcours({ onBack }: { onBack: () => void }) {
   const [screen, setScreen] = useState<Screen>('map');
   const [stars, setStars] = useState<Record<string, number>>(loadStars);
   const [totalXP, setTotalXP] = useState<number>(loadXP);
@@ -261,7 +252,7 @@ function GameParcoursInner({ onClose }: { onClose: () => void }) {
   if (screen === 'map') {
     const nextModule = ALL_MODULES.find(id => !stars[id]) ?? ALL_MODULES[0];
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-navy-700 to-navy-900 overflow-hidden">
+      <div className="flex flex-col h-full bg-gradient-to-b from-navy-700 to-navy-900 overflow-hidden">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -274,7 +265,7 @@ function GameParcoursInner({ onClose }: { onClose: () => void }) {
             </div>
             <span className="text-white/70 text-[11px]">{xpInLevel}/100 XP</span>
           </div>
-          <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none">×</button>
+          <button onClick={onBack} className="text-white/60 hover:text-white text-[13px] bg-white/10 px-3 py-1 rounded-full">← Retour</button>
         </div>
 
         {/* Title */}
@@ -355,7 +346,7 @@ function GameParcoursInner({ onClose }: { onClose: () => void }) {
     const clean = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
     return (
-      <div className="fixed inset-0 z-50 flex flex-col" style={{ background: CCP_COLOR[mod.ccp] ?? '#1c3d5a' }}>
+      <div className="flex flex-col h-full" style={{ background: CCP_COLOR[mod.ccp] ?? '#1c3d5a' }}>
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
           <button onClick={() => setScreen('map')} className="text-white/60 hover:text-white text-[13px]">← Carte</button>
           <div className="text-white/60 text-[11px]">{theoryStep + 1} / {points.length}</div>
@@ -402,7 +393,7 @@ function GameParcoursInner({ onClose }: { onClose: () => void }) {
     const answeredCorrectly = picked === q?.answer;
 
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-stone-50 overflow-hidden">
+      <div className="flex flex-col h-full bg-stone-50 overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-stone-200 flex-shrink-0">
           <button onClick={() => setScreen('map')} className="text-stone-400 hover:text-stone-600 text-lg">×</button>
@@ -519,7 +510,7 @@ function GameParcoursInner({ onClose }: { onClose: () => void }) {
   /* ── Render RESULT ── */
   if (screen === 'result') {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-navy-700 to-navy-900 px-6">
+      <div className="flex flex-col h-full items-center justify-center bg-gradient-to-b from-navy-700 to-navy-900 px-6">
         <div className="text-center flex flex-col items-center gap-6 max-w-sm w-full">
           <div className="text-[40px] animate-pop-in">
             {earnedStars === 3 ? '🎉' : earnedStars === 2 ? '💪' : '📚'}

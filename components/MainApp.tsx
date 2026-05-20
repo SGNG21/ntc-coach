@@ -30,6 +30,7 @@ function formatTime(s: number): string {
 const TABS = [
   { id: 'dashboard', label: '📊 Progression' },
   { id: 'parcours', label: '🗺️ Parcours' },
+  { id: 'game', label: '🎮 Jeu' },
   { id: 'programme', label: '📋 Programme' },
   { id: 'revision', label: '📚 Révision IA' },
   { id: 'express', label: '⚡ Express' },
@@ -112,7 +113,6 @@ export function MainApp() {
     try { return localStorage.getItem('ntc_dark') === '1'; } catch { return false; }
   });
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [gameOpen, setGameOpen] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -548,7 +548,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </aside>
 
         {/* Content */}
-        <main className={tab === 'ecm' ? 'flex-1 overflow-hidden flex flex-col' : tab === 'revision' ? 'flex-1 overflow-hidden flex flex-col p-4' : 'flex-1 overflow-y-auto p-4'}>
+        <main className={tab === 'ecm' || tab === 'game' ? 'flex-1 overflow-hidden flex flex-col' : tab === 'revision' ? 'flex-1 overflow-hidden flex flex-col p-4' : 'flex-1 overflow-y-auto p-4'}>
 
           {/* ── DASHBOARD ── */}
           {tab === 'dashboard' && (
@@ -563,7 +563,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setGameOpen(true)}
+                  onClick={() => setTab('game')}
                   className="py-4 bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-white rounded-xl text-[13px] font-bold shadow-md transition-all active:scale-95 flex flex-col items-center gap-1"
                 >
                   <span className="text-2xl">🎮</span>
@@ -836,6 +836,13 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           {/* ── MES COURS ── */}
           {tab === 'import' && <ImportTab />}
 
+          {/* ── JEU ── */}
+          {tab === 'game' && (
+            <div className="flex-1 overflow-hidden" style={{ height: '100%' }}>
+              <GameParcours onBack={() => setTab('parcours')} />
+            </div>
+          )}
+
           {/* ── ECM ── */}
           {tab === 'ecm' && (
             <div className="flex-1 overflow-hidden" style={{ height: '100%' }}>
@@ -846,7 +853,6 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </main>
       </div>
     </div>
-    {gameOpen && <GameParcours onClose={() => setGameOpen(false)} />}
     {sessionOpen && <ParcourSession onClose={() => setSessionOpen(false)} />}
     </>
   );

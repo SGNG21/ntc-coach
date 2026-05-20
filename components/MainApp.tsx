@@ -99,6 +99,7 @@ export function MainApp() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [ccfTimeLeft, setCcfTimeLeft] = useState<number | null>(null);
+  const [examDaysLeft, setExamDaysLeft] = useState<number | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,6 +126,21 @@ export function MainApp() {
   useEffect(() => {
     try { localStorage.setItem('ntc_score', JSON.stringify(score)); } catch { /* ignore */ }
   }, [score]);
+
+  useEffect(() => {
+    function refresh() {
+      const saved = localStorage.getItem('ntc_exam_date');
+      if (!saved) { setExamDaysLeft(null); return; }
+      const exam = new Date(saved);
+      exam.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setExamDaysLeft(Math.ceil((exam.getTime() - today.getTime()) / 86400000));
+    }
+    refresh();
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
+  }, []);
 
   useEffect(() => {
     return () => { if (ccfIntervalRef.current) clearInterval(ccfIntervalRef.current); };
@@ -366,13 +382,29 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           <h1 className="text-[13px] font-semibold">NTC Coach</h1>
           <span className="hidden sm:inline text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
         </div>
-        <button
-          onClick={() => setTab('dashboard')}
-          className="text-[11px] bg-white/12 hover:bg-white/20 px-2.5 py-1 rounded-full font-mono transition-colors"
-          title="Voir ma progression"
-        >
-          Score : {score.correct}/{score.total}
-        </button>
+        <div className="flex items-center gap-2">
+          {examDaysLeft !== null && (
+            <button
+              onClick={() => setTab('dashboard')}
+              className={`text-[11px] px-2.5 py-1 rounded-full font-semibold transition-colors ${
+                examDaysLeft <= 0 ? 'bg-red-600 text-white' :
+                examDaysLeft <= 7 ? 'bg-red-500/90 text-white' :
+                examDaysLeft <= 30 ? 'bg-amber-400 text-amber-900' :
+                'bg-emerald-500/80 text-white'
+              }`}
+              title="Compte à rebours examen"
+            >
+              {examDaysLeft <= 0 ? '🎯 Exam !' : `J-${examDaysLeft}`}
+            </button>
+          )}
+          <button
+            onClick={() => setTab('dashboard')}
+            className="text-[11px] bg-white/12 hover:bg-white/20 px-2.5 py-1 rounded-full font-mono transition-colors"
+            title="Voir ma progression"
+          >
+            Score : {score.correct}/{score.total}
+          </button>
+        </div>
       </header>
 
       {/* Nav tabs */}

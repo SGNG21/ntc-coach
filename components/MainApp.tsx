@@ -637,6 +637,10 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
             <ProgressDashboard
               score={score}
               onReset={() => setScore({ correct: 0, total: 0, byModule: {} })}
+              onNavigate={(tab, moduleId) => {
+                setTab(tab);
+                if (moduleId) setModuleId(moduleId as ModuleId);
+              }}
             />
           )}
 

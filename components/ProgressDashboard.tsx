@@ -1,7 +1,24 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { MODULES } from '@/lib/reac-data';
+import { getDueModules, getDaysUntilNextDue, loadSRS, type SrsData } from '@/lib/engagement';
 import type { Score, ModuleId } from '@/types';
+
+const MODULE_NAMES: Record<string, string> = {
+  veille: 'CP1 — Veille commerciale',
+  pac: "CP2 — Plan d'actions comm.",
+  prospection: 'CP3 — Prospecter un secteur',
+  perf: 'CP4 — Analyser performances',
+  image: "CP5 — Image entreprise",
+  proposition: 'CP6 — Proposition tech-com',
+  nego: 'CP7 — Négocier la solution',
+  bilan: 'CP8 — Bilan & rendre compte',
+  relation: 'CP9 — Gestion relation client',
+  transversal: 'Compétences transversales',
+  digital: 'Outils digitaux & IA',
+  rse: 'RSE & transition écologique',
+  juridique: 'Cadre juridique',
+};
 
 const CCP_GROUPS = [
   { id: 'CCP1', label: 'CCP 1 — Prospection', color: '#0f5298', modules: ['veille', 'pac', 'prospection', 'perf'] as ModuleId[] },
@@ -33,6 +50,55 @@ function daysUntil(dateStr: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.ceil((exam.getTime() - today.getTime()) / 86400000);
+}
+
+interface SrsCardProps {
+  dueModules: string[];
+  srsData: SrsData;
+  onNavigate: (tab: string, moduleId?: string) => void;
+}
+
+function SrsCard({ dueModules, srsData, onNavigate }: SrsCardProps) {
+  if (dueModules.length > 0) {
+    return (
+      <div className="bg-white dark:bg-navy-800 rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-navy-700">
+        <h3 className="font-bold text-navy-800 dark:text-white mb-3">📚 À réviser aujourd&apos;hui</h3>
+        <div className="space-y-2">
+          {dueModules.map(id => {
+            const entry = srsData[id];
+            return (
+              <div key={id} className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-stone-800 dark:text-stone-100 text-sm">{MODULE_NAMES[id] ?? id}</span>
+                  {entry && (
+                    <span className="ml-2 text-xs text-stone-500 dark:text-stone-400">{entry.lastScore}%</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => onNavigate('parcours', id)}
+                  className="text-xs font-semibold text-navy-600 dark:text-navy-300 hover:underline"
+                >
+                  Réviser →
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const daysUntilNext = getDaysUntilNextDue();
+  return (
+    <div className="bg-white dark:bg-navy-800 rounded-2xl p-5 shadow-sm border border-stone-100 dark:border-navy-700">
+      <h3 className="font-bold text-navy-800 dark:text-white mb-1">📚 Révision espacée</h3>
+      <p className="text-sm text-stone-500 dark:text-stone-400">
+        {daysUntilNext !== null
+          ? `✅ Tout est à jour — prochain rappel dans ${daysUntilNext} jour${daysUntilNext > 1 ? 's' : ''}`
+          : "✅ Aucun module révisé pour l'instant"}
+      </p>
+    </div>
+  );
 }
 
 function CountdownCard({ examDate, onDateChange }: { examDate: string; onDateChange: (d: string) => void }) {
@@ -150,7 +216,7 @@ function CountdownCard({ examDate, onDateChange }: { examDate: string; onDateCha
   );
 }
 
-export function ProgressDashboard({ score, onReset }: { score: Score; onReset: () => void }) {
+export function ProgressDashboard({ score, onReset, onNavigate }: { score: Score; onReset: () => void; onNavigate: (tab: string, moduleId?: string) => void }) {
   const [examDate, setExamDate] = useState('');
 
   useEffect(() => {
@@ -163,6 +229,9 @@ export function ProgressDashboard({ score, onReset }: { score: Score; onReset: (
     localStorage.setItem('ntc_exam_date', d);
     window.dispatchEvent(new Event('storage'));
   }
+
+  const dueModules = getDueModules();
+  const srsData = loadSRS();
 
   const globalPct = pct(score.correct, score.total);
   const totalModules = Object.keys(MODULES).length;
@@ -178,6 +247,9 @@ export function ProgressDashboard({ score, onReset }: { score: Score; onReset: (
 
   return (
     <div className="flex flex-col gap-4">
+
+      {/* ── Révision espacée (SRS) ── */}
+      <SrsCard dueModules={dueModules} srsData={srsData} onNavigate={onNavigate} />
 
       {/* ── Compte à rebours ── */}
       <CountdownCard examDate={examDate} onDateChange={handleDateChange} />

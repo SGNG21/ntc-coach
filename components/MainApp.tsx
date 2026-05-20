@@ -6,6 +6,7 @@ import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
 import { EcmPage } from './EcmPage';
+import { ProgressDashboard } from './ProgressDashboard';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 
 const CCF_DURATIONS: Record<string, number> = {
@@ -21,6 +22,7 @@ function formatTime(s: number): string {
 
 // ─── Tabs ───────────────────────────────────────
 const TABS = [
+  { id: 'dashboard', label: '📊 Progression' },
   { id: 'programme', label: '📋 Programme' },
   { id: 'revision', label: '📚 Révision IA' },
   { id: 'exercices', label: '✏️ Exercices CCF' },
@@ -364,20 +366,13 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           <h1 className="text-[13px] font-semibold">NTC Coach</h1>
           <span className="hidden sm:inline text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="text-[11px] bg-white/12 px-2.5 py-1 rounded-full font-mono">
-            Score : {score.correct}/{score.total}
-          </div>
-          {score.total > 0 && (
-            <button
-              onClick={() => setScore({ correct: 0, total: 0, byModule: {} })}
-              title="Réinitialiser le score"
-              className="text-white/50 hover:text-white/90 text-[10px] transition-colors"
-            >
-              ↺
-            </button>
-          )}
-        </div>
+        <button
+          onClick={() => setTab('dashboard')}
+          className="text-[11px] bg-white/12 hover:bg-white/20 px-2.5 py-1 rounded-full font-mono transition-colors"
+          title="Voir ma progression"
+        >
+          Score : {score.correct}/{score.total}
+        </button>
       </header>
 
       {/* Nav tabs */}
@@ -443,6 +438,14 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
         {/* Content */}
         <main className={tab === 'ecm' ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-y-auto p-4'}>
+
+          {/* ── DASHBOARD ── */}
+          {tab === 'dashboard' && (
+            <ProgressDashboard
+              score={score}
+              onReset={() => setScore({ correct: 0, total: 0, byModule: {} })}
+            />
+          )}
 
           {/* ── PROGRAMME ── */}
           {tab === 'programme' && (

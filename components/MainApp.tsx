@@ -14,7 +14,7 @@ import { ChatHistory, saveConversation } from './ChatHistory';
 import { ParcourPage } from './ParcourPage';
 import { ParcourSession } from './ParcourSession';
 import { GameParcours } from './GameParcours';
-import { loadStreak, updateStreak } from '@/lib/engagement';
+import { loadStreak, updateStreak, updateSRS, getDueModules } from '@/lib/engagement';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 import type { SavedConversation } from './ChatHistory';
 
@@ -120,6 +120,10 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
     if (typeof window === 'undefined') return 0;
     return loadStreak().count;
   });
+  const [dueCount, setDueCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    return getDueModules().length;
+  });
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -193,6 +197,7 @@ export function MainApp({ userId, userEmail, displayName }: { userId?: string; u
       today.setHours(0, 0, 0, 0);
       setExamDaysLeft(Math.ceil((exam.getTime() - today.getTime()) / 86400000));
       setStreakCount(loadStreak().count);
+      setDueCount(getDueModules().length);
     }
     refresh();
     window.addEventListener('storage', refresh);
@@ -472,6 +477,15 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
   const mod = MODULES[moduleId];
 
+  const tabsWithBadge = TABS.map(t =>
+    t.id === 'parcours' && dueCount > 0
+      ? {
+          ...t,
+          badge: dueCount,
+        }
+      : t
+  );
+
   return (
     <>
     <div className="flex flex-col h-screen">
@@ -546,7 +560,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
       {/* Nav tabs */}
       <nav className="bg-white border-b border-stone-200 flex px-2 sm:px-4 overflow-x-auto flex-shrink-0">
-        {TABS.map(t => (
+        {tabsWithBadge.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -556,7 +570,17 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                 : 'text-stone-400 border-transparent hover:text-navy-700'
             }`}
           >
-            {t.label}
+            {'badge' in t && t.badge
+              ? (
+                <span className="flex items-center gap-1">
+                  {t.label}
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {t.badge}
+                  </span>
+                </span>
+              )
+              : t.label
+            }
           </button>
         ))}
       </nav>
@@ -750,6 +774,10 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                   moduleId={moduleId}
                   moduleType={moduleType}
                   onScore={addScore}
+                  onComplete={(scorePercent) => {
+                    updateSRS(moduleId, scorePercent);
+                    setDueCount(getDueModules().length);
+                  }}
                   onSubmitAnswer={async (answer: string, correction: string) => {
                     const prompt = `Correcteur NTC. Compétence : ${mod.label}. Critères REAC : ${mod.criteres.join(' | ')}. Correction référence : ${correction}. Réponse : ${answer}. Donne une correction bienveillante : note /20, points réussis (citer critères REAC), lacunes, conseils.`;
                     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: answer, timestamp: new Date() };
@@ -1061,12 +1089,13 @@ function CCFInfoPanel() {
   );
 }
 
-function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer }: {
+function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer, onComplete }: {
   data: Record<string, unknown>;
   moduleId: ModuleId;
   moduleType: 'c1' | 'c2' | 'tr';
   onScore: (correct: boolean) => void;
   onSubmitAnswer: (answer: string, correction: string) => void;
+  onComplete?: (scorePercent: number) => void;
 }) {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [redacText, setRedacText] = useState('');
@@ -1107,8 +1136,14 @@ function ExerciseRenderer({ data, moduleId, moduleType, onScore, onSubmitAnswer 
                       key={k}
                       disabled={!!chosen}
                       onClick={() => {
-                        setAnswers(prev => ({ ...prev, [i]: k }));
+                        const newAnswers = { ...answers, [i]: k };
+                        setAnswers(newAnswers);
                         onScore(k === q.answer);
+                        if (Object.keys(newAnswers).length === questions.length) {
+                          const correct = questions.filter((qq, idx) => newAnswers[idx] === qq.answer).length;
+                          const scorePercent = Math.round((correct / questions.length) * 100);
+                          onComplete?.(scorePercent);
+                        }
                       }}
                       className={`text-left px-2.5 py-2 rounded-lg border text-[12px] transition-all disabled:cursor-default ${
                         showResult

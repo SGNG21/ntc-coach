@@ -9,6 +9,7 @@ import { EcmPage } from './EcmPage';
 import { ProgressDashboard } from './ProgressDashboard';
 import { RevisionExpress } from './RevisionExpress';
 import { ChatHistory, saveConversation } from './ChatHistory';
+import { ParcourPage } from './ParcourPage';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 import type { SavedConversation } from './ChatHistory';
 
@@ -26,6 +27,7 @@ function formatTime(s: number): string {
 // ─── Tabs ───────────────────────────────────────
 const TABS = [
   { id: 'dashboard', label: '📊 Progression' },
+  { id: 'parcours', label: '🗺️ Parcours' },
   { id: 'programme', label: '📋 Programme' },
   { id: 'revision', label: '📚 Révision IA' },
   { id: 'express', label: '⚡ Express' },
@@ -149,6 +151,18 @@ export function MainApp() {
     }
   }, [moduleId, chatMessages]);
 
+  function markParcourActivity(mid: ModuleId, activity: 'cours' | 'quiz' | 'exercice' | 'fiche') {
+    try {
+      const key = 'ntc_parcours';
+      const p = JSON.parse(localStorage.getItem(key) || '{}');
+      const step = p[mid] ?? { activities: [] };
+      if (!step.activities.includes(activity)) {
+        p[mid] = { ...step, activities: [...step.activities, activity], startedAt: step.startedAt ?? new Date().toISOString() };
+        localStorage.setItem(key, JSON.stringify(p));
+      }
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     function refresh() {
       const saved = localStorage.getItem('ntc_exam_date');
@@ -203,6 +217,11 @@ export function MainApp() {
     } catch { /* fail silently */ }
   }, [sessionId, moduleId]);
 
+  function navigateToModule(moduleId: ModuleId, tab: string) {
+    setModuleId(moduleId);
+    setTab(tab);
+  }
+
   function loadConversation(conv: SavedConversation) {
     setModuleId(conv.moduleId);
     setTab('revision');
@@ -220,6 +239,7 @@ export function MainApp() {
     const aiId = (Date.now() + 1).toString();
     setChatMessages([...newMsgs, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
     setChatLoading(true);
+    if (chatMessages.length === 0) markParcourActivity(moduleId, 'cours');
 
     let fullText = '';
     try {
@@ -311,6 +331,7 @@ export function MainApp() {
       if (!match) throw new Error('no json');
       setExoData(JSON.parse(match[0]));
       setExoCount(n => n + 1);
+      markParcourActivity(moduleId, 'exercice');
     } catch {
       setExoData({ error: 'Erreur de génération. Réessayez.' });
     } finally {
@@ -383,6 +404,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           setFicheContent(fullText);
         }
       );
+      markParcourActivity(ficheModule, 'fiche');
     } catch {
       setFicheContent('❌ Erreur de génération.');
     } finally {
@@ -391,6 +413,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
   }
 
   function addScore(correct: boolean) {
+    markParcourActivity(moduleId, 'quiz');
     setScore(prev => {
       const newScore = {
         ...prev,
@@ -528,6 +551,11 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               score={score}
               onReset={() => setScore({ correct: 0, total: 0, byModule: {} })}
             />
+          )}
+
+          {/* ── PARCOURS ── */}
+          {tab === 'parcours' && (
+            <ParcourPage score={score} onNavigate={navigateToModule} />
           )}
 
           {/* ── PROGRAMME ── */}

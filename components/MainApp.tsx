@@ -11,6 +11,7 @@ import { RevisionExpress } from './RevisionExpress';
 import { ChatHistory, saveConversation } from './ChatHistory';
 import { ParcourPage } from './ParcourPage';
 import { ParcourSession } from './ParcourSession';
+import { GameParcours } from './GameParcours';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 import type { SavedConversation } from './ChatHistory';
 
@@ -111,6 +112,7 @@ export function MainApp() {
     try { return localStorage.getItem('ntc_dark') === '1'; } catch { return false; }
   });
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -558,13 +560,25 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
           {/* ── PARCOURS ── */}
           {tab === 'parcours' && (
-            <div className="flex flex-col gap-4">
-              <button
-                onClick={() => setSessionOpen(true)}
-                className="w-full py-3.5 bg-navy-700 hover:bg-navy-800 text-white rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-              >
-                🗺️ Démarrer une session guidée
-              </button>
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setGameOpen(true)}
+                  className="py-4 bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-white rounded-xl text-[13px] font-bold shadow-md transition-all active:scale-95 flex flex-col items-center gap-1"
+                >
+                  <span className="text-2xl">🎮</span>
+                  <span>Mode Jeu</span>
+                  <span className="text-[10px] font-normal opacity-80">XP · Vies · Étoiles</span>
+                </button>
+                <button
+                  onClick={() => setSessionOpen(true)}
+                  className="py-4 bg-navy-700 hover:bg-navy-800 text-white rounded-xl text-[13px] font-bold shadow-md transition-all active:scale-95 flex flex-col items-center gap-1"
+                >
+                  <span className="text-2xl">🗺️</span>
+                  <span>Session guidée</span>
+                  <span className="text-[10px] font-normal opacity-80">Cours + exercice</span>
+                </button>
+              </div>
               <ParcourPage score={score} onNavigate={navigateToModule} />
             </div>
           )}

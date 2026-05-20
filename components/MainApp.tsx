@@ -10,6 +10,7 @@ import { ProgressDashboard } from './ProgressDashboard';
 import { RevisionExpress } from './RevisionExpress';
 import { ChatHistory, saveConversation } from './ChatHistory';
 import { ParcourPage } from './ParcourPage';
+import { ParcourSession } from './ParcourSession';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
 import type { SavedConversation } from './ChatHistory';
 
@@ -109,6 +110,7 @@ export function MainApp() {
   const [darkMode, setDarkMode] = useState(() => {
     try { return localStorage.getItem('ntc_dark') === '1'; } catch { return false; }
   });
+  const [sessionOpen, setSessionOpen] = useState(false);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -434,6 +436,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
   const mod = MODULES[moduleId];
 
   return (
+    <>
     <div className="flex flex-col h-screen">
       {/* Header */}
       <header className="bg-navy-700 text-white px-4 py-2.5 flex items-center justify-between flex-shrink-0 shadow-md">
@@ -555,7 +558,15 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
 
           {/* ── PARCOURS ── */}
           {tab === 'parcours' && (
-            <ParcourPage score={score} onNavigate={navigateToModule} />
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => setSessionOpen(true)}
+                className="w-full py-3.5 bg-navy-700 hover:bg-navy-800 text-white rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+              >
+                🗺️ Démarrer une session guidée
+              </button>
+              <ParcourPage score={score} onNavigate={navigateToModule} />
+            </div>
           )}
 
           {/* ── PROGRAMME ── */}
@@ -810,6 +821,8 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
         </main>
       </div>
     </div>
+    {sessionOpen && <ParcourSession onClose={() => setSessionOpen(false)} />}
+    </>
   );
 }
 

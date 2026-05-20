@@ -1,5 +1,4 @@
 // lib/engagement.ts
-import type { ModuleId } from '@/types';
 
 const LS_STREAK = 'ntc_streak';
 const LS_SRS    = 'ntc_srs';

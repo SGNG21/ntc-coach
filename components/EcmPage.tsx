@@ -257,19 +257,30 @@ export function EcmPage() {
         <div className="text-[9px] font-bold uppercase tracking-wider text-stone-400 px-1.5 py-1 mb-1">
           Matières ECM
         </div>
-        {ECM_LIST.map(m => (
-          <button
-            key={m.id}
-            onClick={() => switchMatiere(m.id)}
-            className={`w-full text-left px-2 py-2 rounded-lg mb-0.5 flex items-center gap-2 transition-all text-[11.5px] font-medium ${
-              activeId === m.id ? 'text-white shadow-sm' : 'text-stone-600 hover:bg-stone-50'
-            }`}
-            style={activeId === m.id ? { background: m.color } : {}}
-          >
-            <span className="text-base flex-shrink-0">{m.emoji}</span>
-            <span className="leading-tight">{m.label}</span>
-          </button>
-        ))}
+        {ECM_LIST.map(m => {
+          const done = !!(allContent[m.id]?.fiche?.length && allContent[m.id]?.quiz?.length);
+          return (
+            <button
+              key={m.id}
+              onClick={() => switchMatiere(m.id)}
+              className={`w-full text-left px-2 py-2 rounded-lg mb-0.5 flex items-center gap-2 transition-all text-[11.5px] font-medium ${
+                activeId === m.id ? 'text-white shadow-sm' : 'text-stone-600 hover:bg-stone-50'
+              }`}
+              style={activeId === m.id ? { background: m.color } : {}}
+            >
+              <span className="text-base flex-shrink-0">{m.emoji}</span>
+              <span className="leading-tight flex-1">{m.label}</span>
+              {done && (
+                <span
+                  className="text-[9px] flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold"
+                  style={activeId === m.id ? { background: 'rgba(255,255,255,0.3)', color: 'white' } : { background: m.color + '22', color: m.color }}
+                >
+                  ✓
+                </span>
+              )}
+            </button>
+          );
+        })}
       </aside>
 
       {/* ── Main ── */}

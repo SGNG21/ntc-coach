@@ -3,6 +3,7 @@ import { DM_Sans, DM_Mono } from 'next/font/google';
 import './globals.css';
 import { FeedbackWidget } from '@/components/FeedbackWidget';
 import { InstallPWA } from '@/components/InstallPWA';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -37,6 +38,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="NTC Coach" />
       </head>
       <body className="font-sans bg-stone-100 text-stone-900 antialiased">
+        <OfflineBanner />
         {children}
         <FeedbackWidget />
         <InstallPWA />

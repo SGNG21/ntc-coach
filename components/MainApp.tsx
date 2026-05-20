@@ -7,7 +7,10 @@ import { ChatInput } from './ChatInput';
 import { ImportTab } from './ImportTab';
 import { EcmPage } from './EcmPage';
 import { ProgressDashboard } from './ProgressDashboard';
+import { RevisionExpress } from './RevisionExpress';
+import { ChatHistory, saveConversation } from './ChatHistory';
 import type { Message, ModuleId, ChatMode, ExoMode, CCFMode, Score, ModuleConfig } from '@/types';
+import type { SavedConversation } from './ChatHistory';
 
 const CCF_DURATIONS: Record<string, number> = {
   prosp_tel: 15 * 60,
@@ -25,6 +28,7 @@ const TABS = [
   { id: 'dashboard', label: '📊 Progression' },
   { id: 'programme', label: '📋 Programme' },
   { id: 'revision', label: '📚 Révision IA' },
+  { id: 'express', label: '⚡ Express' },
   { id: 'exercices', label: '✏️ Exercices CCF' },
   { id: 'fiches', label: '🗂️ Fiches' },
   { id: 'ccf', label: '🎯 Préparer CCF' },
@@ -100,6 +104,9 @@ export function MainApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [ccfTimeLeft, setCcfTimeLeft] = useState<number | null>(null);
   const [examDaysLeft, setExamDaysLeft] = useState<number | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('ntc_dark') === '1'; } catch { return false; }
+  });
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const ccfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -126,6 +133,21 @@ export function MainApp() {
   useEffect(() => {
     try { localStorage.setItem('ntc_score', JSON.stringify(score)); } catch { /* ignore */ }
   }, [score]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) { root.classList.add('dark'); localStorage.setItem('ntc_dark', '1'); }
+    else { root.classList.remove('dark'); localStorage.setItem('ntc_dark', '0'); }
+  }, [darkMode]);
+
+  const prevModuleId = useRef<ModuleId>(moduleId);
+  useEffect(() => {
+    if (prevModuleId.current !== moduleId) {
+      const msgs = chatMessages.filter(m => m.content);
+      if (msgs.length >= 2) saveConversation(prevModuleId.current, msgs);
+      prevModuleId.current = moduleId;
+    }
+  }, [moduleId, chatMessages]);
 
   useEffect(() => {
     function refresh() {
@@ -180,6 +202,17 @@ export function MainApp() {
       if (data.sessionId && !sessionId) setSessionId(data.sessionId);
     } catch { /* fail silently */ }
   }, [sessionId, moduleId]);
+
+  function loadConversation(conv: SavedConversation) {
+    setModuleId(conv.moduleId);
+    setTab('revision');
+    setChatMessages(conv.messages.map((m, i) => ({
+      id: i.toString(),
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+      timestamp: new Date(),
+    })));
+  }
 
   async function sendChat(text: string) {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
@@ -383,6 +416,13 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
           <span className="hidden sm:inline text-[9px] bg-white/15 px-1.5 py-0.5 rounded">REAC 2024 · RNCP 39063</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setDarkMode(d => !d)}
+            title={darkMode ? 'Mode clair' : 'Mode sombre'}
+            className="text-white/70 hover:text-white transition-colors text-[15px] leading-none"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
           {examDaysLeft !== null && (
             <button
               onClick={() => setTab('dashboard')}
@@ -502,7 +542,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                   ))}
                 </div>
                 {/* Quick prompts */}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 items-center">
                   {(mod.qps || []).map(qp => (
                     <button
                       key={qp}
@@ -512,6 +552,7 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
                       {qp}
                     </button>
                   ))}
+                  <ChatHistory onLoad={loadConversation} />
                 </div>
               </div>
 
@@ -531,6 +572,9 @@ Format markdown avec **gras** pour les termes clés. Niveau 1ère année NTC.`,
               </div>
             </div>
           )}
+
+          {/* ── EXPRESS ── */}
+          {tab === 'express' && <RevisionExpress />}
 
           {/* ── EXERCICES ── */}
           {tab === 'exercices' && (

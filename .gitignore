@@ -5,3 +5,9 @@ node_modules/
 out/
 *.log
 .DS_Store
+
+# Local tool directories
+.superpowers/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
